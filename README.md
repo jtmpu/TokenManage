@@ -10,7 +10,55 @@ This list of compilation targets is likely to expand in the future, as well as p
 
 ## TokenManage CLI
 
-TODO: 
+List processes on the system.
+
+```powershell
+PS Z:\repos\TokenManage\TokenManageCLI\bin\Debug\net40> .\TokenManageCLI.exe info -l
+PID,   PROCESS,         USER
+2132,  conhost,         BOMBCORP\Administrator
+796,   svchost,         NT AUTHORITY\SYSTEM
+616,   conhost,         BOMBCORP\test
+524,   svchost,         NT AUTHORITY\SYSTEM
+1324,  sppsvc,
+1048,  svchost,         NT AUTHORITY\SYSTEM
+1892,  powershell,      BOMBCORP\test
+1580,  SppExtComObj,    NT AUTHORITY\NETWORK SERVICE
+1040,  explorer,        BOMBCORP\test
+2552,  powershell,      BOMBCORP\test
+360,   TokenManageCLI,  BOMBCORP\test
+228,   smss,
+316,   csrss,
+404,   winlogon,        NT AUTHORITY\SYSTEM
+848,   svchost,         NT AUTHORITY\LOCAL SERVICE
+1016,  svchost,         NT AUTHORITY\LOCAL SERVICE
+668,   VBoxService,     NT AUTHORITY\SYSTEM
+752,   svchost,         NT AUTHORITY\LOCAL SERVICE
+1996,  taskhostex,      BOMBCORP\test
+660,   dwm,             Window Manager\DWM-1
+2172,  powershell,      BOMBCORP\Administrator
+2076,  ServerManager,   BOMBCORP\test
+2784,  msdtc,           NT AUTHORITY\NETWORK SERVICE
+468,   lsass,           NT AUTHORITY\SYSTEM
+912,   svchost,         NT AUTHORITY\NETWORK SERVICE
+2424,  VBoxTray,        BOMBCORP\test
+376,   wininit,         NT AUTHORITY\SYSTEM
+552,   svchost,         NT AUTHORITY\NETWORK SERVICE
+460,   services,
+2060,  Taskmgr,         BOMBCORP\test
+368,   csrss,
+1344,  conhost,         BOMBCORP\test
+1076,  wlms,            NT AUTHORITY\SYSTEM
+184,   spoolsv,         NT AUTHORITY\SYSTEM
+4,     System,
+0,     Idle,
+```
+
+Start a new process (defaults to cmd.exe) using the access token from process ID 2172.
+
+```powershell
+PS Z:\repos\TokenManage\TokenManageCLI\bin\Debug\net40> .\TokenManageCLI.exe start -p 2172
+```
+
 
 ## TokenManage class library and PowerShell
 
