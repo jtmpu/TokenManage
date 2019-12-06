@@ -5,7 +5,7 @@ using System.Text;
 
 namespace TokenManage
 {
-    enum TOKEN_INFORMATION_CLASS
+    public enum TOKEN_INFORMATION_CLASS
     {
         /// <summary>
         /// The buffer receives a TOKEN_USER structure that contains the user account of the token.
@@ -125,6 +125,19 @@ namespace TokenManage
         MaxTokenInfoClass
     }
 
+    public enum SID_NAME_USE
+    {
+        SidTypeUser = 1,
+        SidTypeGroup,
+        SidTypeDomain,
+        SidTypeAlias,
+        SidTypeWellKnownGroup,
+        SidTypeDeletedAccount,
+        SidTypeInvalid,
+        SidTypeUnknown,
+        SidTypeComputer
+    }
+
     [Flags]
     public enum ProcessAccessFlags : uint
     {
@@ -231,6 +244,19 @@ namespace TokenManage
         public IntPtr hStdOutput;
         public IntPtr hStdError;
     }
+
+    public struct TOKEN_USER
+    {
+        public SID_AND_ATTRIBUTES User;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct SID_AND_ATTRIBUTES
+    {
+        public IntPtr Sid;
+        public int Attributes;
+    }
+
 
     public class WinInterop
     {
@@ -378,13 +404,32 @@ namespace TokenManage
         public static extern uint GetLastError();
 
         [DllImport("advapi32.dll", SetLastError = true)]
-        static extern bool GetTokenInformation(
+        public static extern bool GetTokenInformation(
             IntPtr TokenHandle,
             TOKEN_INFORMATION_CLASS TokenInformationClass,
             IntPtr TokenInformation,
             uint TokenInformationLength,
             out uint ReturnLength);
 
+
+        [DllImport("advapi32", CharSet = CharSet.Auto, SetLastError = true)]
+        public static extern bool ConvertSidToStringSid(
+            IntPtr pSid, 
+            out string strSid);
+
+        [DllImport("advapi32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        public static extern bool LookupAccountSid(
+            string lpSystemName,
+            [MarshalAs(UnmanagedType.LPArray)] byte[] Sid,
+            System.Text.StringBuilder lpName,
+            ref uint cchName,
+            System.Text.StringBuilder ReferencedDomainName,
+            ref uint cchReferencedDomainName,
+            out SID_NAME_USE peUse);
+
+        [DllImport("advapi32.dll")]
+        public static extern uint GetLengthSid(
+            IntPtr pSid);
         #endregion
     }
 }

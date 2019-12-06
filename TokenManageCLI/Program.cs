@@ -8,7 +8,6 @@ namespace TokenManageCLI
     class Program
     {
 
-
         static int Main(string[] args)
         {
             return Parser.Default.ParseArguments<StartProcessOptions, InfoOptions>(args)

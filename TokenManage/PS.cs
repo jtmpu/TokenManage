@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 
 namespace TokenManage
@@ -39,6 +40,16 @@ namespace TokenManage
                 return false;
             }
             return true;
+        }
+
+        public static void ListProcesses()
+        {
+            var processes = TMProcess.GetAllProcesses();
+            foreach(TMProcess p in processes)
+            {
+                Console.WriteLine($"{p.GetProcessID()}, {p.GetProcessName()}, {p.GetProcessTokenUser()}");
+            }
+
         }
     }
 }
