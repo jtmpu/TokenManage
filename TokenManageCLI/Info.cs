@@ -46,31 +46,31 @@ namespace TokenManageCLI
                 string pid = "PID";
                 string user = "USER";
 
-                output.Append(pid + ",");
-                for (int i = 0; i < (maxPid + padding) - pid.Length; i++)
-                    output.Append(" ");
-                output.Append(name + ",");
-                for (int i = 0; i < (maxName + padding) - name.Length; i++)
-                    output.Append(" ");
+                output.Append(pid + "," + generateSpaces(maxPid + padding - pid.Length));
+                output.Append(name + "," + generateSpaces(maxName + padding - name.Length));
                 output.Append(user + "\n");
 
                 foreach (TMProcess p in processes)
                 {
                     string line = "";
-                    line += p.GetProcessID().ToString();
-                    line += ",";
-                    for (int i = 0; i < (maxPid + padding) - p.GetProcessID().ToString().Length; i++)
-                        line += " ";
-                    line += p.GetProcessName();
-                    line += ",";
-                    for (int i = 0; i < (maxName + padding) - p.GetProcessName().Length; i++)
-                        line += " ";
+                    line += p.GetProcessID().ToString() +  ",";
+                    line += generateSpaces(maxPid + padding - p.GetProcessID().ToString().Length);
+                    line += p.GetProcessName() + ",";
+                    line += generateSpaces(maxName + padding - p.GetProcessName().Length);
                     line += p.GetProcessTokenUser();
                     output.Append(line + "\n");
                 }
 
                 console.Write(output.ToString());
             }
+        }
+
+        private string generateSpaces(int number)
+        {
+            string ret = "";
+            for (int i = 0; i < number; i++)
+                ret += " ";
+            return ret;
         }
     }
 }
