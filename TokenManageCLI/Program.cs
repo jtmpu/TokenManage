@@ -20,6 +20,7 @@ namespace TokenManageCLI
         public static int RunStartProcess(StartProcessOptions opts)
         {
             ConsoleOutput co = new ConsoleOutput(opts);
+            Logger.SetGlobalOutput(co);
             StartProcess startProcess = new StartProcess(opts, co);
             try
             {
@@ -35,6 +36,7 @@ namespace TokenManageCLI
         public static int RunInfo(InfoOptions opts)
         {
             ConsoleOutput co = new ConsoleOutput(opts);
+            Logger.SetGlobalOutput(co);
             Info info = new Info(opts, co);
             try
             {
