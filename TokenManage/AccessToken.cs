@@ -12,7 +12,5 @@ namespace TokenManage
         {
             this.hToken = hToken;
         }
-
-
     }
 }

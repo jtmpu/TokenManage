@@ -1,17 +1,11 @@
 ﻿using System;
+using TokenManage;
 using System.Collections.Generic;
 using System.Text;
 
 namespace TokenManageCLI
 {
-
-    public enum LOG
-    {
-        INFO,
-        DEBUG,
-        ERROR
-    }
-    public class ConsoleOutput
+    public class ConsoleOutput : IOutput
     {
         private bool verbose;
         private bool quiet;
@@ -35,22 +29,37 @@ namespace TokenManageCLI
                 Console.WriteLine(message);
         }
 
-        public void Log(LOG level, string msg)
+        public void Log(LogLevel level, string msg)
         {
             switch (level)
             {
-                case LOG.INFO:
+                case LogLevel.INFO:
                     if (this.debug || this.verbose)
                         this.WriteLine("[+] INFO: " + msg);
                     break;
-                case LOG.ERROR:
+                case LogLevel.ERROR:
                     this.WriteLine("[!] ERROR: " + msg);
                     break;
-                case LOG.DEBUG:
+                case LogLevel.DEBUG:
                     if (this.debug)
                         this.WriteLine("[+] DEBUG: " + msg);
                     break;
             }
+        }
+
+        public void Error(string msg)
+        {
+            this.Log(LogLevel.ERROR, msg);
+        }
+
+        public void Debug(string msg)
+        {
+            this.Log(LogLevel.DEBUG, msg);
+        }
+
+        public void Info(string msg)
+        {
+            this.Log(LogLevel.INFO, msg);
         }
     }
 }
