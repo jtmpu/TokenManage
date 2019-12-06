@@ -6,11 +6,10 @@ namespace TokenManage
 {
     public class AccessToken
     {
-        private IntPtr hToken;
 
-        public AccessToken(IntPtr hToken)
+        private AccessToken()
         {
-            this.hToken = hToken;
         }
+
     }
 }
