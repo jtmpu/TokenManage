@@ -3,6 +3,7 @@ using TokenManage;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Linq;
 
 namespace TokenManageCLI
 {
@@ -50,7 +51,8 @@ namespace TokenManageCLI
                 output.Append(name + "," + generateSpaces(maxName + padding - name.Length));
                 output.Append(user + "\n");
 
-                foreach (TMProcess p in processes)
+                var sorted = processes.OrderBy(x => x.GetProcessID()).ToList();
+                foreach (TMProcess p in sorted)
                 {
                     string line = "";
                     line += p.GetProcessID().ToString() +  ",";

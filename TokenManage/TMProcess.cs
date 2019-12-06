@@ -14,11 +14,26 @@ namespace TokenManage
         private string processTokenUser;
         private string processName;
 
+        private bool currentProcess;
+
         private TMProcess(Process process)
         {
             this.pid = process.Id;
             this.processName = process.ProcessName;
             this.processTokenUser = null;
+            this.currentProcess = false;
+        }
+
+        /// <summary>
+        /// This is a "pseudo" constructor to signal that this
+        /// is the current process.
+        /// </summary>
+        private TMProcess()
+        {
+            this.pid = 0;
+            this.processName = "self";
+            this.processTokenUser = null;
+            this.currentProcess = true;
         }
 
         public int GetProcessID()
@@ -46,8 +61,19 @@ namespace TokenManage
                 return this.processTokenUser;
 
             this.processTokenUser = String.Empty;
-            IntPtr hProc = WinInterop.OpenProcess(ProcessAccessFlags.QueryInformation, false, this.pid);
-            if (hProc == IntPtr.Zero)
+            
+            IntPtr hProc;
+            if (this.currentProcess)
+            {
+                hProc = WinInterop.GetCurrentProcess();
+            }
+            else
+            {
+                hProc = WinInterop.OpenProcess(ProcessAccessFlags.QueryInformation, false, this.pid);
+            }
+            
+            // If we failed to open a handle to another process.
+            if (!this.currentProcess && hProc == IntPtr.Zero)
             {
                 Logger.GetInstance().Error($"Failed to open handle to process with PID: {pid}. OpenProcess failed with error code: {WinInterop.GetLastError()}");
                 return processTokenUser;
@@ -56,7 +82,7 @@ namespace TokenManage
             IntPtr hToken;
             if(!WinInterop.OpenProcessToken(hProc, WinInterop.TOKEN_QUERY, out hToken))
             {
-                Logger.GetInstance().Error($"Failed to open handle to process token. OpenProcessToken failed with error code: {WinInterop.GetLastError()}");
+                Logger.GetInstance().Error($"Failed to open handle to process token (PID: {pid}). OpenProcessToken failed with error code: {WinInterop.GetLastError()}");
                 return processTokenUser;
             }
 
@@ -85,13 +111,13 @@ namespace TokenManage
                 }
                 else
                 {
-                    Logger.GetInstance().Error($"Failed to retrieve user for process token. LookupAccountSid failed with error: {WinInterop.GetLastError()}");
+                    Logger.GetInstance().Error($"Failed to retrieve user for process token (PID: {pid}). LookupAccountSid failed with error: {WinInterop.GetLastError()}");
                     this.processTokenUser = "";
                 }
             }
             else
             {
-                Logger.GetInstance().Error($"Failed to retreive token information for process token. GetTokenInformation failed with error: {WinInterop.GetLastError()}");
+                Logger.GetInstance().Error($"Failed to retreive token information for process token (PID: {pid}). GetTokenInformation failed with error: {WinInterop.GetLastError()}");
             }
 
             Marshal.FreeHGlobal(tokenInfo);
@@ -99,22 +125,20 @@ namespace TokenManage
         }
 
         /// <summary>
-        /// 
+        /// Retrieves a list of all processes.
+        /// This uses System.Diagnostics.Process to retrieve
+        /// all processes and wraps them in the TMProcess object.
         /// </summary>
         /// <returns></returns>
         public static List<TMProcess> GetAllProcesses()
         {
-            List<TMProcess> ret = new List<TMProcess>();
-            Process[] processes = Process.GetProcesses();
-            foreach(Process p in processes)
-            {
-                ret.Add(new TMProcess(p));
-            }
-            return ret;
+            return Process.GetProcesses().Select(x => new TMProcess(x)).ToList();
         }
 
         /// <summary>
         /// Gets a process based on its ID.
+        /// This uses System.Diagnostics.Process to retrieve the
+        /// process, and wraps it in a TMProcess object.
         /// </summary>
         /// <param name="pid"></param>
         /// <returns></returns>
@@ -132,6 +156,8 @@ namespace TokenManage
         /// <summary>
         /// Returns a list of processes with an access token connected to 
         /// the specified user.
+        /// This uses System.Diagnostics.Process to retrieve the
+        /// process, and wraps it in a TMProcess object.
         /// </summary>
         /// <param name="user"></param>
         /// <returns></returns>
@@ -142,10 +168,26 @@ namespace TokenManage
             return ret.ToList();
         }
 
+        /// <summary>
+        /// Retrieves a list of processes based on the name.
+        /// This uses System.Diagnostics.Process to retrieve the
+        /// process, and wraps it in a TMProcess object.
+        /// </summary>
+        /// <param name="name"></param>
+        /// <returns></returns>
         public static List<TMProcess> GetProcessByName(string name)
         {
             var processes = Process.GetProcessesByName(name).ToList();
             return processes.Select(x => new TMProcess(x)).ToList();
+        }
+
+        /// <summary>
+        /// Returns the current process.
+        /// </summary>
+        /// <returns></returns>
+        public static TMProcess GetCurrentProcess()
+        {
+            return new TMProcess();
         }
     }
 }
