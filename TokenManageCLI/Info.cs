@@ -4,6 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Linq;
+using TokenManage.Domain;
+using TokenManage.Domain.AccessTokenInfo;
 
 namespace TokenManageCLI
 {
@@ -13,6 +15,8 @@ namespace TokenManageCLI
 
         [Option('l', "list", Required = false, HelpText = "List all available access tokens")]
         public bool ListTokens { get; set; }
+        [Option('t', "test", Required = false, HelpText = "Test")]
+        public bool Test { get; set; }
 
     }
     public class Info
@@ -30,17 +34,37 @@ namespace TokenManageCLI
         {
             if (options.ListTokens)
             {
-                var processes = TMProcess.GetAllProcesses();
                 StringBuilder output = new StringBuilder();
                 int padding = 2;
                 int maxName = 0;
                 int maxPid = 0;
                 int maxUser = 0;
-                foreach (TMProcess p in processes)
+
+
+                var processes = TMProcess.GetAllProcesses();
+                List<Tuple<string, string, string>> processesInfo = new List<Tuple<string, string, string>>();
+                foreach(var p in processes)
                 {
-                    maxName = Math.Max(maxName, p.GetProcessName().Length);
-                    maxPid = Math.Max(maxPid, p.GetProcessID().ToString().Length);
-                    maxUser = Math.Max(maxUser, p.GetProcessTokenUser().Length);
+                    string username = "";
+                    try
+                    {
+                        var pHandle = TMProcessHandle.FromProcess(p, ProcessAccessFlags.QueryInformation);
+                        var tHandle = AccessTokenHandle.FromProcessHandle(pHandle, TokenAccess.TOKEN_QUERY);
+                        var userInfo = AccessTokenUser.FromTokenHandle(tHandle);
+                        username = userInfo.User;
+                    }
+                    catch(Exception)
+                    {
+                    }
+                    processesInfo.Add(new Tuple<string, string, string>(p.ProcessId.ToString(), p.ProcessName, username));
+                }
+
+
+                foreach (var p in processesInfo)
+                {
+                    maxPid = Math.Max(maxPid, p.Item1.Length);
+                    maxName = Math.Max(maxName, p.Item2.Length);
+                    maxUser = Math.Max(maxUser, p.Item3.Length);
                 }
 
                 string name = "PROCESS";
@@ -51,15 +75,15 @@ namespace TokenManageCLI
                 output.Append(name + "," + generateSpaces(maxName + padding - name.Length));
                 output.Append(user + "\n");
 
-                var sorted = processes.OrderBy(x => x.GetProcessID()).ToList();
-                foreach (TMProcess p in sorted)
+                var sorted = processesInfo.OrderBy(x => x.Item1).ToList();
+                foreach (var p in sorted)
                 {
                     string line = "";
-                    line += p.GetProcessID().ToString() +  ",";
-                    line += generateSpaces(maxPid + padding - p.GetProcessID().ToString().Length);
-                    line += p.GetProcessName() + ",";
-                    line += generateSpaces(maxName + padding - p.GetProcessName().Length);
-                    line += p.GetProcessTokenUser();
+                    line += p.Item1 +  ",";
+                    line += generateSpaces(maxPid + padding - p.Item1.Length);
+                    line += p.Item2 + ",";
+                    line += generateSpaces(maxName + padding - p.Item2.Length);
+                    line += p.Item3;
                     output.Append(line + "\n");
                 }
 

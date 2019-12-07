@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
+using TokenManage.Domain;
+using TokenManage.Domain.AccessTokenInfo;
 
 namespace TokenManage
 {
@@ -45,9 +47,19 @@ namespace TokenManage
         public static void ListProcesses()
         {
             var processes = TMProcess.GetAllProcesses();
-            foreach(TMProcess p in processes)
+            foreach(var p in processes)
             {
-                Console.WriteLine($"{p.GetProcessID()}, {p.GetProcessName()}, {p.GetProcessTokenUser()}");
+                try
+                {
+                    var pHandle = TMProcessHandle.FromProcess(p, ProcessAccessFlags.QueryInformation);
+                    var hToken = AccessTokenHandle.FromProcessHandle(pHandle, TokenAccess.TOKEN_QUERY);
+                    var userInfo = AccessTokenUser.FromTokenHandle(hToken);
+                    Console.WriteLine($"{p.ProcessId}, {p.ProcessName}, {userInfo.User}");
+
+                } catch(Exception)
+                {
+                    continue;
+                }
             }
 
         }
