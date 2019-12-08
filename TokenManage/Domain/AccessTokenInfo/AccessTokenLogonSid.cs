@@ -100,20 +100,23 @@ namespace TokenManage.Domain.AccessTokenInfo
                 IntPtr[] sidPtrs = new IntPtr[logonSid.GroupCount];
                 int[] attributes = new int[logonSid.GroupCount];
 
-                for(int i = 0; i < logonSid.GroupCount; i++)
+                var sidAndAttrSize = Marshal.SizeOf(new SID_AND_ATTRIBUTES());
+
+                for (int i = 0; i < logonSid.GroupCount; i++)
                 {
-                    string sidStr;
-                    if(Advapi32.ConvertSidToStringSid(logonSid.Groups[i].Sid, out sidStr))
-                    {
-                        sids[i] = sidStr;
+                    var saa = (SID_AND_ATTRIBUTES)Marshal.PtrToStructure(new IntPtr(tokenInfo.ToInt64() + i * sidAndAttrSize + IntPtr.Size), typeof(SID_AND_ATTRIBUTES));
+
+                    IntPtr strPtr;
+                    if(Advapi32.ConvertSidToStringSid(saa.Sid, out strPtr))
+                    { 
+                        sids[i] = Marshal.PtrToStringAuto(strPtr);
                     }
                     else
                     {
                         Logger.GetInstance().Error("Failed to retrieve SID-string for token LogonSession.");
                     }
-                    sidPtrs[i] = logonSid.Groups[i].Sid;
-                    attributes[i] = logonSid.Groups[i].Attributes;
-                    Logger.GetInstance().Debug(sidStr);
+                    sidPtrs[i] = saa.Sid;
+                    attributes[i] = saa.Attributes;
                 }
                 Marshal.FreeHGlobal(tokenInfo);
                 return new AccessTokenLogonSid(sids, attributes, sidPtrs);

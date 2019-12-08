@@ -38,7 +38,8 @@ namespace TokenManageCLI
                         this.WriteLine("[+] INFO: " + msg);
                     break;
                 case LogLevel.ERROR:
-                    this.WriteLine("[!] ERROR: " + msg);
+                    if (this.debug || this.verbose)
+                        this.WriteLine("[!] ERROR: " + msg);
                     break;
                 case LogLevel.DEBUG:
                     if (this.debug)

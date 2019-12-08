@@ -111,7 +111,7 @@ namespace TokenManage.API
         [DllImport("advapi32", CharSet = CharSet.Auto, SetLastError = true)]
         public static extern bool ConvertSidToStringSid(
             IntPtr pSid,
-            out string strSid);
+            out IntPtr ptrSid);
 
         [DllImport("advapi32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         public static extern bool LookupAccountSid(

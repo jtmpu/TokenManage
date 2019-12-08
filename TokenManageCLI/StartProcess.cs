@@ -24,7 +24,7 @@ namespace TokenManageCLI
         [Option('s', "system", Required = false, Default = false, HelpText = "Automatically attempts to open a CMD shell running as NT AUTHORITY\\System")]
         public bool System { get; set; }
 
-        [Option('S', "session", Required = false, Default = 0, HelpText = "Starts a process using the token connected to the specified session id.")]
+        [Option('n', "session", Required = false, HelpText = "Starts a process using the token connected to the specified session id.")]
         public uint SessionId { get; set; }
     }
 

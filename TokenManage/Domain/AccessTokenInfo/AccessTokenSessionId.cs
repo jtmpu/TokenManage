@@ -31,16 +31,17 @@ namespace TokenManage.Domain.AccessTokenInfo
             if (success)
             {
                 sessionId = Marshal.ReadInt32(tokenInfo);
+
+                Marshal.FreeHGlobal(tokenInfo);
+
+                return new AccessTokenSessionId(sessionId);
             }
             else
             {
+                Marshal.FreeHGlobal(tokenInfo);
                 Logger.GetInstance().Error($"Failed to retreive session id information for access token. GetTokenInformation failed with error: {Kernel32.GetLastError()}");
                 throw new TokenInformationException();
             }
-
-            Marshal.FreeHGlobal(tokenInfo);
-
-            return new AccessTokenSessionId(sessionId);
         }
 
         public static AccessTokenSessionId FromValue(int sessionId)

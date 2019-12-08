@@ -6,6 +6,8 @@ namespace TokenManage.API
 {
     public class Constants
     {
+        public const int ERROR_INSUFFICIENT_BUFFER = 122;
+
         public const int SE_PRIVILEGE_ENABLED = 0x00000002;
         public const UInt32 STANDARD_RIGHTS_REQUIRED = 0x000F0000;
         public const UInt32 STANDARD_RIGHTS_READ = 0x00020000;
