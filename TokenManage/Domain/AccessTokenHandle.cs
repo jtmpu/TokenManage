@@ -67,6 +67,7 @@ namespace TokenManage.Domain
             if(!WinInterop.OpenProcessToken(process.Handle, combinedAccess, out tokenHandle))
             {
                 Logger.GetInstance().Error($"Failed to retrieve handle to processes access token.");
+                throw new OpenProcessTokenException();
             }
             Logger.GetInstance().Debug($"Successfully opened handle to process access token.");
 
@@ -97,6 +98,46 @@ namespace TokenManage.Domain
                 Logger.GetInstance().Debug($"Successfully authenticated {domain}\\{username}");
             }
 
+            return new AccessTokenHandle(hToken, TokenAccess.TOKEN_ALL_ACCESS);
+        }
+
+        public static AccessTokenHandle Duplicate(AccessTokenHandle originalToken, SECURITY_IMPERSONATION_LEVEL impersonationLevel, 
+            TOKEN_TYPE tokenType, params TokenAccess[] desiredAccess)
+        {
+            var defaultAccess = TokenAccess.TOKEN_ALL_ACCESS;
+            uint combinedAccess = (uint)defaultAccess;
+            if (desiredAccess.Length > 0)
+                combinedAccess = (uint)(new List<TokenAccess>(desiredAccess).Aggregate((x, y) => x | y));
+
+            SECURITY_ATTRIBUTES secAttr = new SECURITY_ATTRIBUTES();
+            IntPtr newToken;
+            Logger.GetInstance().Debug($"Attempting to duplicate token.");
+            if (!WinInterop.DuplicateTokenEx(originalToken.GetHandle(), combinedAccess, ref secAttr, impersonationLevel, tokenType, out newToken))
+            {
+                Logger.GetInstance().Error($"Failed to duplicate token. DuplicateTokenEx failed with error code: {WinInterop.GetLastError()}");
+                throw new DuplicateTokenException();
+            }
+            Logger.GetInstance().Debug($"Successfully duplicated token.");
+
+            if (desiredAccess.Length > 0)
+                return new AccessTokenHandle(newToken, desiredAccess);
+            else
+                return new AccessTokenHandle(newToken, defaultAccess);
+        }
+
+        /// <summary>
+        /// Retrieves a handle to the primary token connected to a session ID.
+        /// </summary>
+        /// <param name="sessionId"></param>
+        /// <returns></returns>
+        public static AccessTokenHandle FromSessionId(uint sessionId)
+        {
+            IntPtr hToken;
+            if(!WinInterop.WTSQueryUserToken(sessionId, out hToken))
+            {
+                Logger.GetInstance().Error($"Failed to retrieve the primary access token for session '{sessionId}'. WTSQueryUserToken failed with error: {WinInterop.GetLastError()}");
+                throw new OpenProcessTokenException();
+            }
             return new AccessTokenHandle(hToken, TokenAccess.TOKEN_ALL_ACCESS);
         }
     }

