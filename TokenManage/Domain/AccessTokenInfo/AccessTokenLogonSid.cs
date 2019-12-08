@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using TokenManage.API;
 using System.Text;
 using TokenManage.Exceptions;
 
@@ -68,10 +69,10 @@ namespace TokenManage.Domain.AccessTokenInfo
             var tgPtr = Marshal.AllocHGlobal(size);
             Marshal.StructureToPtr(tokenGroups, tgPtr, true);
 
-            if(!WinInterop.SetTokenInformation(handle.GetHandle(), TOKEN_INFORMATION_CLASS.TokenLogonSid, tgPtr, size))
+            if(!Advapi32.SetTokenInformation(handle.GetHandle(), TOKEN_INFORMATION_CLASS.TokenLogonSid, tgPtr, size))
             {
                 Marshal.FreeHGlobal(tgPtr);
-                Logger.GetInstance().Error($"Failed to set new logon sid for token. SetTokenInformation failed with error: {WinInterop.GetLastError()}");
+                Logger.GetInstance().Error($"Failed to set new logon sid for token. SetTokenInformation failed with error: {Kernel32.GetLastError()}");
                 throw new TokenInformationException();
             }
 
@@ -86,9 +87,9 @@ namespace TokenManage.Domain.AccessTokenInfo
 
             IntPtr hToken = handle.GetHandle();
 
-            success = WinInterop.GetTokenInformation(hToken, TOKEN_INFORMATION_CLASS.TokenLogonSid, IntPtr.Zero, tokenInfLength, out tokenInfLength);
+            success = Advapi32.GetTokenInformation(hToken, TOKEN_INFORMATION_CLASS.TokenLogonSid, IntPtr.Zero, tokenInfLength, out tokenInfLength);
             IntPtr tokenInfo = Marshal.AllocHGlobal(Convert.ToInt32(tokenInfLength));
-            success = WinInterop.GetTokenInformation(hToken, TOKEN_INFORMATION_CLASS.TokenLogonSid, tokenInfo, tokenInfLength, out tokenInfLength);
+            success = Advapi32.GetTokenInformation(hToken, TOKEN_INFORMATION_CLASS.TokenLogonSid, tokenInfo, tokenInfLength, out tokenInfLength);
 
 
             if (success)
@@ -102,7 +103,7 @@ namespace TokenManage.Domain.AccessTokenInfo
                 for(int i = 0; i < logonSid.GroupCount; i++)
                 {
                     string sidStr;
-                    if(WinInterop.ConvertSidToStringSid(logonSid.Groups[i].Sid, out sidStr))
+                    if(Advapi32.ConvertSidToStringSid(logonSid.Groups[i].Sid, out sidStr))
                     {
                         sids[i] = sidStr;
                     }
@@ -120,7 +121,7 @@ namespace TokenManage.Domain.AccessTokenInfo
             else
             {
                 Marshal.FreeHGlobal(tokenInfo);
-                Logger.GetInstance().Error($"Failed to retreive session id information for access token. GetTokenInformation failed with error: {WinInterop.GetLastError()}");
+                Logger.GetInstance().Error($"Failed to retreive session id information for access token. GetTokenInformation failed with error: {Kernel32.GetLastError()}");
                 throw new TokenInformationException();
             }
         }

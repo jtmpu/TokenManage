@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using TokenManage.API;
 using TokenManage.Exceptions;
 
 namespace TokenManage.Domain
@@ -40,7 +41,7 @@ namespace TokenManage.Domain
 
         ~AccessTokenHandle()
         {
-            if (!WinInterop.CloseHandle(handle))
+            if (!Kernel32.CloseHandle(handle))
                 Logger.GetInstance().Error($"Failed to remove access token handle.");
         }
 
@@ -64,7 +65,7 @@ namespace TokenManage.Domain
             IntPtr tokenHandle;
 
             Logger.GetInstance().Debug($"Attemping to open handle to process access token.");
-            if(!WinInterop.OpenProcessToken(process.Handle, combinedAccess, out tokenHandle))
+            if(!Advapi32.OpenProcessToken(process.Handle, combinedAccess, out tokenHandle))
             {
                 Logger.GetInstance().Error($"Failed to retrieve handle to processes access token.");
                 throw new OpenProcessTokenException();
@@ -88,10 +89,10 @@ namespace TokenManage.Domain
 
             IntPtr hToken;
             Logger.GetInstance().Debug($"Authenticating with {domain}\\{username}");
-            if (!WinInterop.LogonUser(username, domain, password, (int)logonType, (int)logonProvider, out hToken))
+            if (!Advapi32.LogonUser(username, domain, password, (int)logonType, (int)logonProvider, out hToken))
             {
-                Logger.GetInstance().Error($"Authentication failed for user {domain}\\{username}. LogonUser failed with error code: {WinInterop.GetLastError()}");
-                throw new AuthenticationFailedException($"Failed to authenticate user {domain}\\{username}. LogonUser failed with error code: {WinInterop.GetLastError()}");
+                Logger.GetInstance().Error($"Authentication failed for user {domain}\\{username}. LogonUser failed with error code: {Kernel32.GetLastError()}");
+                throw new AuthenticationFailedException($"Failed to authenticate user {domain}\\{username}. LogonUser failed with error code: {Kernel32.GetLastError()}");
             }
             else
             {
@@ -112,9 +113,9 @@ namespace TokenManage.Domain
             SECURITY_ATTRIBUTES secAttr = new SECURITY_ATTRIBUTES();
             IntPtr newToken;
             Logger.GetInstance().Debug($"Attempting to duplicate token.");
-            if (!WinInterop.DuplicateTokenEx(originalToken.GetHandle(), combinedAccess, ref secAttr, impersonationLevel, tokenType, out newToken))
+            if (!Advapi32.DuplicateTokenEx(originalToken.GetHandle(), combinedAccess, ref secAttr, impersonationLevel, tokenType, out newToken))
             {
-                Logger.GetInstance().Error($"Failed to duplicate token. DuplicateTokenEx failed with error code: {WinInterop.GetLastError()}");
+                Logger.GetInstance().Error($"Failed to duplicate token. DuplicateTokenEx failed with error code: {Kernel32.GetLastError()}");
                 throw new DuplicateTokenException();
             }
             Logger.GetInstance().Debug($"Successfully duplicated token.");
@@ -133,9 +134,9 @@ namespace TokenManage.Domain
         public static AccessTokenHandle FromSessionId(uint sessionId)
         {
             IntPtr hToken;
-            if(!WinInterop.WTSQueryUserToken(sessionId, out hToken))
+            if(!Wtsapi32.WTSQueryUserToken(sessionId, out hToken))
             {
-                Logger.GetInstance().Error($"Failed to retrieve the primary access token for session '{sessionId}'. WTSQueryUserToken failed with error: {WinInterop.GetLastError()}");
+                Logger.GetInstance().Error($"Failed to retrieve the primary access token for session '{sessionId}'. WTSQueryUserToken failed with error: {Kernel32.GetLastError()}");
                 throw new OpenProcessTokenException();
             }
             return new AccessTokenHandle(hToken, TokenAccess.TOKEN_ALL_ACCESS);

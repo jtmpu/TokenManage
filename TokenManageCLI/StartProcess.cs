@@ -4,6 +4,7 @@ using System.Linq;
 using TokenManage;
 using TokenManage.Domain;
 using TokenManage.Domain.AccessTokenInfo;
+using TokenManage.API;
 
 namespace TokenManageCLI
 {
@@ -87,9 +88,9 @@ namespace TokenManageCLI
             }
             this.console.Debug($"Starting with application: {applicationName}");
 
-            if (!WinInterop.CreateProcessWithTokenW(hDuplicate.GetHandle(), LogonFlags.NetCredentialsOnly, applicationName, this.options.CommandLine, CreationFlags.NewConsole, IntPtr.Zero, @"C:\", ref si, out pi))
+            if (!Advapi32.CreateProcessWithTokenW(hDuplicate.GetHandle(), LogonFlags.NetCredentialsOnly, applicationName, this.options.CommandLine, CreationFlags.NewConsole, IntPtr.Zero, @"C:\", ref si, out pi))
             {
-                this.console.Error($"Failed to create shell. CreateProcessWithTokenW failed with error code: {WinInterop.GetLastError()}");
+                this.console.Error($"Failed to create shell. CreateProcessWithTokenW failed with error code: {Kernel32.GetLastError()}");
                 return;
             }
         }
@@ -102,10 +103,10 @@ namespace TokenManageCLI
 
             this.console.Debug($"Successfully retrieved process handle.");
 
-            uint desiredAccess = WinInterop.TOKEN_IMPERSONATE;
-            desiredAccess |= WinInterop.TOKEN_QUERY;
-            desiredAccess |= WinInterop.TOKEN_DUPLICATE;
-            desiredAccess |= WinInterop.TOKEN_ASSIGN_PRIMARY;
+            uint desiredAccess = Constants.TOKEN_IMPERSONATE;
+            desiredAccess |= Constants.TOKEN_QUERY;
+            desiredAccess |= Constants.TOKEN_DUPLICATE;
+            desiredAccess |= Constants.TOKEN_ASSIGN_PRIMARY;
             var hToken = AccessTokenHandle.FromProcessHandle(hProc, TokenAccess.TOKEN_IMPERSONATE,
                 TokenAccess.TOKEN_QUERY, TokenAccess.TOKEN_DUPLICATE, TokenAccess.TOKEN_ASSIGN_PRIMARY);
             this.console.Debug($"Successfully retrieved process access token handle.");
@@ -122,9 +123,9 @@ namespace TokenManageCLI
             }
             this.console.Debug($"Starting with application: {applicationName}");
 
-            if (!WinInterop.CreateProcessWithTokenW(hDuplicate.GetHandle(), LogonFlags.NetCredentialsOnly, applicationName, this.options.CommandLine, CreationFlags.NewConsole, IntPtr.Zero, @"C:\", ref si, out pi))
+            if (!Advapi32.CreateProcessWithTokenW(hDuplicate.GetHandle(), LogonFlags.NetCredentialsOnly, applicationName, this.options.CommandLine, CreationFlags.NewConsole, IntPtr.Zero, @"C:\", ref si, out pi))
             {
-                this.console.Error($"Failed to create shell. CreateProcessWithTokenW failed with error code: {WinInterop.GetLastError()}");
+                this.console.Error($"Failed to create shell. CreateProcessWithTokenW failed with error code: {Kernel32.GetLastError()}");
                 return;
             }
         }

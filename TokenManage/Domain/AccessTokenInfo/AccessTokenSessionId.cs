@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
 using TokenManage.Exceptions;
+using TokenManage.API;
 
 namespace TokenManage.Domain.AccessTokenInfo
 {
@@ -22,9 +23,9 @@ namespace TokenManage.Domain.AccessTokenInfo
 
             IntPtr hToken = handle.GetHandle();
 
-            success = WinInterop.GetTokenInformation(hToken, TOKEN_INFORMATION_CLASS.TokenSessionId, IntPtr.Zero, tokenInfLength, out tokenInfLength);
+            success = Advapi32.GetTokenInformation(hToken, TOKEN_INFORMATION_CLASS.TokenSessionId, IntPtr.Zero, tokenInfLength, out tokenInfLength);
             IntPtr tokenInfo = Marshal.AllocHGlobal(Convert.ToInt32(tokenInfLength));
-            success = WinInterop.GetTokenInformation(hToken, TOKEN_INFORMATION_CLASS.TokenSessionId, tokenInfo, tokenInfLength, out tokenInfLength);
+            success = Advapi32.GetTokenInformation(hToken, TOKEN_INFORMATION_CLASS.TokenSessionId, tokenInfo, tokenInfLength, out tokenInfLength);
             
             Int32 sessionId = -1;
             if (success)
@@ -33,7 +34,7 @@ namespace TokenManage.Domain.AccessTokenInfo
             }
             else
             {
-                Logger.GetInstance().Error($"Failed to retreive session id information for access token. GetTokenInformation failed with error: {WinInterop.GetLastError()}");
+                Logger.GetInstance().Error($"Failed to retreive session id information for access token. GetTokenInformation failed with error: {Kernel32.GetLastError()}");
                 throw new TokenInformationException();
             }
 
@@ -51,9 +52,9 @@ namespace TokenManage.Domain.AccessTokenInfo
         {
             var sessionIdPtr = Marshal.AllocHGlobal(4);
             Marshal.Copy(BitConverter.GetBytes(sessionId.SessionId), 0, sessionIdPtr, 4);
-            if (!WinInterop.SetTokenInformation(handle.GetHandle(), TOKEN_INFORMATION_CLASS.TokenSessionId, sessionIdPtr, 4))
+            if (!Advapi32.SetTokenInformation(handle.GetHandle(), TOKEN_INFORMATION_CLASS.TokenSessionId, sessionIdPtr, 4))
             {
-                Logger.GetInstance().Error($"Failed to set session id to: {sessionId.SessionId}. SetTokenInformation failed with error code: {WinInterop.GetLastError()}");
+                Logger.GetInstance().Error($"Failed to set session id to: {sessionId.SessionId}. SetTokenInformation failed with error code: {Kernel32.GetLastError()}");
                 throw new TokenInformationException();
             }
         }

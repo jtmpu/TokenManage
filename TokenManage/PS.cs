@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Text;
 using TokenManage.Domain;
 using TokenManage.Domain.AccessTokenInfo;
+using TokenManage.API;
 
 namespace TokenManage
 {
@@ -17,15 +18,15 @@ namespace TokenManage
         public static bool EnablePrivilege(string privilege)
         {
             LUID luid;
-            if (!WinInterop.LookupPrivilegeValue(null, privilege, out luid))
+            if (!Advapi32.LookupPrivilegeValue(null, privilege, out luid))
             {
                 return false;
             }
 
-            IntPtr hProc = WinInterop.GetCurrentProcess();
-            uint desiredAccess = WinInterop.TOKEN_QUERY | WinInterop.TOKEN_ADJUST_PRIVILEGES;
+            IntPtr hProc = Kernel32.GetCurrentProcess();
+            uint desiredAccess = Constants.TOKEN_QUERY | Constants.TOKEN_ADJUST_PRIVILEGES;
             IntPtr hToken;
-            if (!WinInterop.OpenProcessToken(hProc, desiredAccess, out hToken))
+            if (!Advapi32.OpenProcessToken(hProc, desiredAccess, out hToken))
             {
                 return false;
             }
@@ -35,9 +36,9 @@ namespace TokenManage
             newPriv.Privileges = new LUID_AND_ATTRIBUTES[1];
             newPriv.Privileges[0] = new LUID_AND_ATTRIBUTES();
             newPriv.Privileges[0].Luid = luid;
-            newPriv.Privileges[0].Attributes = WinInterop.SE_PRIVILEGE_ENABLED;
+            newPriv.Privileges[0].Attributes = Constants.SE_PRIVILEGE_ENABLED;
 
-            if (!WinInterop.AdjustTokenPrivileges(hToken, false, ref newPriv, 0, IntPtr.Zero, IntPtr.Zero))
+            if (!Advapi32.AdjustTokenPrivileges(hToken, false, ref newPriv, 0, IntPtr.Zero, IntPtr.Zero))
             {
                 return false;
             }

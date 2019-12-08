@@ -6,6 +6,7 @@ using System.Text;
 using System.Linq;
 using TokenManage.Domain;
 using TokenManage.Domain.AccessTokenInfo;
+using TokenManage.API;
 
 namespace TokenManageCLI
 {

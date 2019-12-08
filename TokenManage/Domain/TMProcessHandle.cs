@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using TokenManage.Exceptions;
+using TokenManage.API;
 
 namespace TokenManage.Domain
 {
@@ -32,13 +33,13 @@ namespace TokenManage.Domain
         ~TMProcessHandle()
         {
             if (!this.selfPseudoHandle)
-                WinInterop.CloseHandle(this.Handle);
+                Kernel32.CloseHandle(this.Handle);
         }
 
         public static TMProcessHandle GetCurrentProcessHandle()
         {
             Logger.GetInstance().Debug($"Retrieve handle to the current process.");
-            return new TMProcessHandle(WinInterop.GetCurrentProcess(), ProcessAccessFlags.All, true);
+            return new TMProcessHandle(Kernel32.GetCurrentProcess(), ProcessAccessFlags.All, true);
         }
         
         public static TMProcessHandle FromProcess(TMProcess process, ProcessAccessFlags desiredAccess = ProcessAccessFlags.All, bool inheritHandle = true)
@@ -48,10 +49,10 @@ namespace TokenManage.Domain
 
         public static TMProcessHandle FromProcessId(int pid, ProcessAccessFlags desiredAccess = ProcessAccessFlags.All, bool inheritHandle = true)
         {
-            IntPtr hProcess = WinInterop.OpenProcess(desiredAccess, inheritHandle, pid);
+            IntPtr hProcess = Kernel32.OpenProcess(desiredAccess, inheritHandle, pid);
             if(hProcess == IntPtr.Zero)
             {
-                string errMsg = $"Failed to open handle to process '{pid}' with the access flag '{desiredAccess.ToString()}'. OpenProcess failed with error code: {WinInterop.GetLastError()}.";
+                string errMsg = $"Failed to open handle to process '{pid}' with the access flag '{desiredAccess.ToString()}'. OpenProcess failed with error code: {Kernel32.GetLastError()}.";
                 Logger.GetInstance().Error(errMsg);
                 throw new OpenProcessException(errMsg);
             }
