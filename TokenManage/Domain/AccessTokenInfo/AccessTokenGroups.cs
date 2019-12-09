@@ -83,7 +83,6 @@ namespace TokenManage.Domain.AccessTokenInfo
                                 Logger.GetInstance().Error($"Failed to lookup name and domain from SID. LookupAccountSid failed with error: {err}");
                                 name = "UNKNOWN";
                                 domain = "UNKNOWN";
-                                peUse = SID_NAME_USE.SidTypeUnknown;
                             }
                             else
                             {

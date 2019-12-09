@@ -54,7 +54,7 @@ namespace TokenManageCLI
                         var userInfo = AccessTokenUser.FromTokenHandle(tHandle);
                         var sessId = AccessTokenSessionId.FromTokenHandle(tHandle);
                         var logonId = AccessTokenLogonSid.FromTokenHandle(tHandle);
-                        username = userInfo.User + ":" + sessId.SessionId.ToString() + ":";
+                        username = userInfo.Username + ":" + sessId.SessionId.ToString() + ":";
                         foreach (var sid in logonId.GetLogonSidStrings())
                             username += sid + ",";
                     }

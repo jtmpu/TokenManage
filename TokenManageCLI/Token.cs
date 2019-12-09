@@ -92,7 +92,7 @@ namespace TokenManageCLI
             var user = AccessTokenUser.FromTokenHandle(hToken);
             console.WriteLine("[USERNAME]");
             console.WriteLine("");
-            console.WriteLine(user.User);
+            console.WriteLine($"{user.Domain}\\{user.Username}");
             console.WriteLine("");
         }
 

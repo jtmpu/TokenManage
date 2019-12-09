@@ -3,16 +3,22 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
 using TokenManage.API;
+using TokenManage.Exceptions;
 
 namespace TokenManage.Domain.AccessTokenInfo
 {
     public class AccessTokenUser
     {
-        public string User { get; }
+        public string Username { get; }
+        public string Domain { get; }
 
-        private AccessTokenUser(string user)
+        public SID_NAME_USE Type { get; }
+
+        private AccessTokenUser(string user, string domain, SID_NAME_USE t)
         {
-            this.User = user;
+            this.Username = user;
+            this.Domain = domain;
+            this.Type = t;
         }
 
         public static AccessTokenUser FromTokenHandle(AccessTokenHandle handle)
@@ -26,7 +32,6 @@ namespace TokenManage.Domain.AccessTokenInfo
             IntPtr tokenInfo = Marshal.AllocHGlobal(Convert.ToInt32(tokenInfLength));
             success = Advapi32.GetTokenInformation(hToken, TOKEN_INFORMATION_CLASS.TokenUser, tokenInfo, tokenInfLength, out tokenInfLength);
 
-            var accessTokenUser = "";
             if (success)
             {
                 TOKEN_USER tokenUser = (TOKEN_USER)Marshal.PtrToStructure(tokenInfo, typeof(TOKEN_USER));
@@ -39,24 +44,53 @@ namespace TokenManage.Domain.AccessTokenInfo
                 StringBuilder sbDomain = new StringBuilder();
                 uint cchReferencedDomainName = (uint)sbDomain.Capacity;
                 SID_NAME_USE peUse;
+
+
+                var user = "";
+                var domain = "";
                 if (Advapi32.LookupAccountSid(null, sid, sbUser, ref cchName, sbDomain, ref cchReferencedDomainName, out peUse))
                 {
-                    accessTokenUser = $"{sbDomain.ToString()}\\{sbUser.ToString()}";
+                    user = sbUser.ToString();
+                    domain = sbDomain.ToString();
                 }
                 else
                 {
-                    Logger.GetInstance().Error($"Failed to retrieve user for access token. LookupAccountSid failed with error: {Kernel32.GetLastError()}");
-                    accessTokenUser = "";
+                    var err = Kernel32.GetLastError();
+                    if (err == Constants.ERROR_INSUFFICIENT_BUFFER)
+                    {
+                        sbUser.EnsureCapacity((int)cchName);
+                        sbDomain.EnsureCapacity((int)cchReferencedDomainName);
+                        if (Advapi32.LookupAccountSid(null, sid, sbUser, ref cchName, sbDomain, ref cchReferencedDomainName, out peUse))
+                        {
+                            user = sbUser.ToString();
+                            domain = sbDomain.ToString();
+                        }
+                        else
+                        {
+                            Logger.GetInstance().Error($"Failed to retrieve user for access token. LookupAccountSid failed with error: {err}");
+                            user = "UNKNOWN";
+                            domain = "UNKNOWN";
+                        }
+                    }
+                    else
+                    {
+                        Logger.GetInstance().Error($"Failed to retrieve user for access token. LookupAccountSid failed with error: {err}");
+                        user = "UNKNOWN";
+                        domain = "UNKNOWN";
+                    }
                 }
+                Marshal.FreeHGlobal(tokenInfo);
+
+                return new AccessTokenUser(user, domain, peUse);
             }
             else
             {
+                Marshal.FreeHGlobal(tokenInfo);
                 Logger.GetInstance().Error($"Failed to retreive token information for access token. GetTokenInformation failed with error: {Kernel32.GetLastError()}");
+                throw new TokenInformationException();
             }
 
-            Marshal.FreeHGlobal(tokenInfo);
 
-            return new AccessTokenUser(accessTokenUser);
         }
     }
 }

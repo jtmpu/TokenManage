@@ -12,37 +12,21 @@ namespace TokenManage
     {
         public static String Whoami()
         {
-            return String.Format(@"{0}\{1}", Environment.UserDomainName, Environment.UserName);
+            var hProc = TMProcessHandle.GetCurrentProcessHandle();
+            var hToken = AccessTokenHandle.FromProcessHandle(hProc);
+            var user = AccessTokenUser.FromTokenHandle(hToken);
+            return String.Format(@"{0}\{1}", user.Domain, user.Username);
         }
 
-        public static bool EnablePrivilege(string privilege)
+        public static void EnablePrivilege(string privilege)
         {
-            LUID luid;
-            if (!Advapi32.LookupPrivilegeValue(null, privilege, out luid))
-            {
-                return false;
-            }
+            var hProc = TMProcessHandle.GetCurrentProcessHandle();
+            var hToken = AccessTokenHandle.FromProcessHandle(hProc);
 
-            IntPtr hProc = Kernel32.GetCurrentProcess();
-            uint desiredAccess = Constants.TOKEN_QUERY | Constants.TOKEN_ADJUST_PRIVILEGES;
-            IntPtr hToken;
-            if (!Advapi32.OpenProcessToken(hProc, desiredAccess, out hToken))
-            {
-                return false;
-            }
+            var newPrivs = new List<ATPrivilege>();
+            newPrivs.Add(ATPrivilege.FromValues(privilege, Constants.SE_PRIVILEGE_ENABLED));
 
-            TOKEN_PRIVILEGES newPriv = new TOKEN_PRIVILEGES();
-            newPriv.PrivilegeCount = 1;
-            newPriv.Privileges = new LUID_AND_ATTRIBUTES[1];
-            newPriv.Privileges[0] = new LUID_AND_ATTRIBUTES();
-            newPriv.Privileges[0].Luid = luid;
-            newPriv.Privileges[0].Attributes = Constants.SE_PRIVILEGE_ENABLED;
-
-            if (!Advapi32.AdjustTokenPrivileges(hToken, false, ref newPriv, 0, IntPtr.Zero, IntPtr.Zero))
-            {
-                return false;
-            }
-            return true;
+            AccessTokenPrivileges.AdjustTokenPrivileges(hToken, newPrivs);
         }
 
         public static void ListProcesses()
@@ -55,7 +39,7 @@ namespace TokenManage
                     var pHandle = TMProcessHandle.FromProcess(p, ProcessAccessFlags.QueryInformation);
                     var hToken = AccessTokenHandle.FromProcessHandle(pHandle, TokenAccess.TOKEN_QUERY);
                     var userInfo = AccessTokenUser.FromTokenHandle(hToken);
-                    Console.WriteLine($"{p.ProcessId}, {p.ProcessName}, {userInfo.User}");
+                    Console.WriteLine($"{p.ProcessId}, {p.ProcessName}, {userInfo.Username}");
 
                 } catch(Exception)
                 {

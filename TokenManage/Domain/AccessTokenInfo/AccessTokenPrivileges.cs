@@ -65,7 +65,7 @@ namespace TokenManage.Domain.AccessTokenInfo
                     }
                     Marshal.FreeHGlobal(ptrLuid);
 
-                    privs.Add(new ATPrivilege(privilegeName, laa.Attributes));
+                    privs.Add(ATPrivilege.FromValues(privilegeName, laa.Attributes));
                 }
 
 
@@ -80,6 +80,43 @@ namespace TokenManage.Domain.AccessTokenInfo
                 throw new TokenInformationException();
             }
         }
+
+        /// <summary>
+        /// Attempts to adjust the specified token's privileges. Only a list of the privileges which
+        /// should be changed need to be specified.
+        /// Throws an exceptions if the access token privilege adjustment fails.
+        /// </summary>
+        /// <param name="handle"></param>
+        /// <param name="newPrivileges"></param>
+        public static void AdjustTokenPrivileges(AccessTokenHandle hToken, List<ATPrivilege> newPrivileges)
+        {
+            if (newPrivileges.Count == 0)
+                return;
+
+            TOKEN_PRIVILEGES tpNew = new TOKEN_PRIVILEGES();
+            tpNew.PrivilegeCount = newPrivileges.Count;
+            tpNew.Privileges = new LUID_AND_ATTRIBUTES[newPrivileges.Count];
+            for(int i = 0; i < newPrivileges.Count; i++)
+            {
+                LUID luid;
+                if (!Advapi32.LookupPrivilegeValue(null, newPrivileges[i].Name, out luid))
+                {
+                    var msg = $"Failed to lookup LUID for {newPrivileges[i].Name}. LookupPrivilegeValue failed with error: {Kernel32.GetLastError()}";
+                    Logger.GetInstance().Error(msg);
+                    throw new AdjustTokenPrivilegeException(msg);
+                }
+                tpNew.Privileges[i] = new LUID_AND_ATTRIBUTES();
+                tpNew.Privileges[i].Luid = luid;
+                tpNew.Privileges[i].Attributes = newPrivileges[i].Attributes;
+            }
+
+            if (!Advapi32.AdjustTokenPrivileges(hToken.GetHandle(), false, ref tpNew, 0, IntPtr.Zero, IntPtr.Zero))
+            {
+                var msg = $"Failed to adjust token privileges. AdjustTokenPrivileges failed with error: {Kernel32.GetLastError()}";
+                Logger.GetInstance().Error(msg);
+                throw new AdjustTokenPrivilegeException(msg);
+            }
+        }
     }
 
     public class ATPrivilege
@@ -87,7 +124,7 @@ namespace TokenManage.Domain.AccessTokenInfo
         public string Name { get; }
         public uint Attributes { get; }
 
-        public ATPrivilege(string name, uint attributes)
+        private ATPrivilege(string name, uint attributes)
         {
             this.Name = name;
             this.Attributes = attributes;
@@ -96,6 +133,11 @@ namespace TokenManage.Domain.AccessTokenInfo
         public bool IsEnabled()
         {
             return this.Attributes == Constants.SE_PRIVILEGE_ENABLED;
+        }
+
+        public static ATPrivilege FromValues(string name, uint attributes)
+        {
+            return new ATPrivilege(name, attributes);
         }
     }
 }
