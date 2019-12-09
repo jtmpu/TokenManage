@@ -143,5 +143,14 @@ namespace TokenManage.API
             TOKEN_INFORMATION_CLASS TokenInformationClass,
             IntPtr TokenInformation,
             Int32 TokenInformationLength);
+
+
+        [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool LookupPrivilegeName(
+            string lpSystemName,
+            IntPtr lpLuid,
+            System.Text.StringBuilder lpName,
+            ref int cchName);
     }
 }
