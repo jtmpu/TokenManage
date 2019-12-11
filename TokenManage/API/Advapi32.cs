@@ -152,5 +152,17 @@ namespace TokenManage.API
             IntPtr lpLuid,
             System.Text.StringBuilder lpName,
             ref int cchName);
+
+        [DllImport("advapi32.dll", SetLastError = true)]
+        public static extern bool ImpersonateLoggedOnUser(IntPtr hToken);
+
+        [DllImport("advapi32.dll", SetLastError = true)]
+        public static extern bool RevertToSelf();
+
+        // SetThreadToken
+        [DllImport("advapi32.dll", SetLastError = true)]
+        public static extern bool SetThreadToken(IntPtr pHandle, IntPtr hToken);
+
+
     }
 }

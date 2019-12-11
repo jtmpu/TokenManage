@@ -33,7 +33,7 @@ namespace TokenManage
         public static void SetPrivilege(string privilege, bool enabled)
         {
             var hProc = TMProcessHandle.GetCurrentProcessHandle();
-            var hToken = AccessTokenHandle.FromProcessHandle(hProc);
+            var hToken = AccessTokenHandle.FromProcessHandle(hProc, TokenAccess.TOKEN_ADJUST_PRIVILEGES);
 
             var newPrivs = new List<ATPrivilege>();
             var attributes = (uint)(enabled ? Constants.SE_PRIVILEGE_ENABLED : Constants.SE_PRIVILEGE_DISABLED);
@@ -43,6 +43,31 @@ namespace TokenManage
         }
 
         #endregion
+
+        /// <summary>
+        /// Duplicates and impersonates the process token of the specified PID.
+        /// This replaces the current thread token. Call RevertToSelf() to get back
+        /// previous access token.
+        /// </summary>
+        /// <param name="pid"></param>
+        public static void ImpersonateProcessToken(int pid)
+        {
+            var hProc = TMProcessHandle.FromProcessId(pid, ProcessAccessFlags.QueryInformation);
+            var hToken = AccessTokenHandle.FromProcessHandle(hProc, TokenAccess.TOKEN_IMPERSONATE, TokenAccess.TOKEN_DUPLICATE);
+
+            var hDuplicate = AccessTokenHandle.Duplicate(hToken, SECURITY_IMPERSONATION_LEVEL.SecurityImpersonation, 
+                TOKEN_TYPE.TokenImpersonation, TokenAccess.TOKEN_ALL_ACCESS);
+
+            if(!Advapi32.SetThreadToken(IntPtr.Zero, hDuplicate.GetHandle()))
+            {
+                Console.WriteLine($"{Kernel32.GetLastError()}");
+            }
+        }
+
+        public static void RevertToSelf()
+        {
+            Advapi32.RevertToSelf();
+        }
 
         public static void ListProcesses()
         {
