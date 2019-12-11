@@ -69,6 +69,36 @@ are used.
 Currently, this works:
 
 ```powershell
+Microsoft Windows [Version 10.0.18362.476]
+(c) 2019 Microsoft Corporation. Med ensamrätt.
+
+C:\Windows\system32>powershell -sta
+Windows PowerShell
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+Try the new cross-platform PowerShell https://aka.ms/pscore6
+
+PS C:\Windows\system32> [System.Reflection.Assembly]::Load([IO.File]::ReadAllBytes("C:\Users\user\source\repos\TokenManage\TokenManageCLI\bin\Debug\net45\TokenManage.dll"))
+
+GAC    Version        Location
+---    -------        --------
+False  v4.0.30319
+
+
+PS C:\Windows\system32> get-process lsass
+
+Handles  NPM(K)    PM(K)      WS(K)     CPU(s)     Id  SI ProcessName
+-------  ------    -----      -----     ------     --  -- -----------
+   1662      26     8424      17192      30,34    744   0 lsass
+
+
+PS C:\Windows\system32> [TokenManage.PS]::ImpersonateProcessToken(744)
+PS C:\Windows\system32> [Environment]::UserName
+SYSTEM
+```
+
+
+```powershell
 PS C:\Users\user> powershell -sta
 Windows PowerShell
 Copyright (C) Microsoft Corporation. All rights reserved.
