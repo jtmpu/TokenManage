@@ -16,9 +16,12 @@ namespace TokenManage.Domain.AccessTokenInfo
             this.groups = groups;
         }
 
-        public List<ATGroup> GetGroups()
+        public IEnumerable<ATGroup> GetGroupEnumerator()
         {
-            return this.groups;
+            foreach(var group in groups)
+            {
+                yield return group;
+            }
         }
 
         public static AccessTokenGroups FromTokenHandle(AccessTokenHandle handle)

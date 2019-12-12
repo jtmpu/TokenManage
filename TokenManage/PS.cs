@@ -10,12 +10,56 @@ namespace TokenManage
 {
     public class PS
     {
-        public static String Whoami()
+
+        /// <summary>
+        /// Return access token information regarding current process.
+        /// </summary>
+        /// <returns></returns>
+        public static String WhoisProcess()
         {
             var hProc = TMProcessHandle.GetCurrentProcessHandle();
             var hToken = AccessTokenHandle.FromProcessHandle(hProc);
             var user = AccessTokenUser.FromTokenHandle(hToken);
-            return String.Format(@"{0}\{1}", user.Domain, user.Username);
+            return GetAccessTokenInfo(hToken);
+        }
+
+        /// <summary>
+        /// Return access token information regarding current thread.
+        /// </summary>
+        /// <returns></returns>
+        public static String WhoisThread()
+        {
+            var hThread = TMThreadHandle.GetCurrentThreadHandle();
+            var hToken = AccessTokenHandle.FromThreadHandle(hThread);
+            var user = AccessTokenUser.FromTokenHandle(hToken);
+            return GetAccessTokenInfo(hToken);
+        }
+
+        private static string GetAccessTokenInfo(AccessTokenHandle hToken)
+        {
+            StringBuilder info = new StringBuilder();
+            var user = AccessTokenUser.FromTokenHandle(hToken);
+            var groups = AccessTokenGroups.FromTokenHandle(hToken);
+            var privileges = AccessTokenPrivileges.FromTokenHandle(hToken);
+            info.Append("[USERNAME]\n");
+            info.Append("\n");
+            info.Append($"{user.Domain}\\{user.Username}\n");
+            info.Append("\n");
+            info.Append("[GROUPS]");
+            info.Append("\n");
+            foreach (var group in groups.GetGroupEnumerator())
+                info.Append($"{group.Domain}\\{group.Name}\n");
+            info.Append("\n");
+            info.Append("[PRIVILEGES]");
+            info.Append("\n");
+            foreach (var priv in privileges.GetPrivileges())
+            {
+                var enabled = priv.Attributes == Constants.SE_PRIVILEGE_ENABLED ? "Enabled" : "Disabled";
+                info.Append($"{priv.Name}: {enabled}\n");
+
+            }
+            info.Append("\n");
+            return info.ToString();
         }
 
         #region Privileges

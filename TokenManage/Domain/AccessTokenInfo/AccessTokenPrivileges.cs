@@ -81,6 +81,11 @@ namespace TokenManage.Domain.AccessTokenInfo
             }
         }
 
+        public static void AdjustTokenPrivileges(AccessTokenHandle hToken, AccessTokenPrivileges privileges)
+        {
+            AdjustTokenPrivileges(hToken, privileges.GetPrivileges());
+        }
+
         /// <summary>
         /// Attempts to adjust the specified token's privileges. Only a list of the privileges which
         /// should be changed need to be specified.

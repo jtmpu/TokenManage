@@ -193,6 +193,46 @@ namespace TokenManage.API
         MaxTokenInfoClass
     }
 
+    public enum PrivilegeConstants
+    {
+        SeAssignPrimaryTokenPrivilege,
+        SeAuditPrivilege,
+        SeBackupPrivilege,
+        SeChangeNotifyPrivilege,
+        SeCreateGlobalPrivilege,
+        SeCreatePagefilePrivilege,
+        SeCreatePermanentPrivilege,
+        SeCreateSymbolicLinkPrivilege,
+        SeCreateTokenPrivilege,
+        SeDebugPrivilege,
+        SeDelegateSessionUserImpersonatePrivilege,
+        SeEnableDelegationPrivilege,
+        SeImpersonatePrivilege,
+        SeIncreaseBasePriorityPrivilege,
+        SeIncreaseQuotaPrivilege,
+        SeIncreaseWorkingSetPrivilege,
+        SeLoadDriverPrivilege,
+        SeLockMemoryPrivilege,
+        SeMachineAccountPrivilege,
+        SeManageVolumePrivilege,
+        SeProfileSingleProcessPrivilege,
+        SeRelabelPrivilege,
+        SeRemoteShutdownPrivilege,
+        SeRestorePrivilege,
+        SeSecurityPrivilege,
+        SeShutdownPrivilege,
+        SeSyncAgentPrivilege,
+        SeSystemEnvironmentPrivilege,
+        SeSystemProfilePrivilege,
+        SeSystemtimePrivilege,
+        SeTakeOwnershipPrivilege,
+        SeTcbPrivilege,
+        SeTimeZonePrivilege,
+        SeTrustedCredManAccessPrivilege,
+        SeUndockPrivilege,
+        SeUnsolicitedInputPrivilege
+    }
+
     public enum SID_NAME_USE
     {
         SidTypeUser = 1,
@@ -329,5 +369,10 @@ namespace TokenManage.API
     {
         public uint GroupCount;
         [MarshalAs(UnmanagedType.ByValArray)] public SID_AND_ATTRIBUTES[] Groups;
+    }
+
+    public struct TOKEN_OWNER
+    {
+        public IntPtr Owner;
     }
 }

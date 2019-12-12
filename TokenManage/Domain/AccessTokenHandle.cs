@@ -67,7 +67,7 @@ namespace TokenManage.Domain
             Logger.GetInstance().Debug($"Attemping to open handle to process access token.");
             if(!Advapi32.OpenProcessToken(process.Handle, combinedAccess, out tokenHandle))
             {
-                Logger.GetInstance().Error($"Failed to retrieve handle to processes access token.");
+                Logger.GetInstance().Error($"Failed to retrieve handle to processes access token. OpenProcessToken failed with error: {Kernel32.GetLastError()}");
                 throw new OpenProcessTokenException();
             }
             Logger.GetInstance().Debug($"Successfully opened handle to process access token.");
@@ -140,6 +140,26 @@ namespace TokenManage.Domain
                 throw new OpenProcessTokenException();
             }
             return new AccessTokenHandle(hToken, TokenAccess.TOKEN_ALL_ACCESS);
+        }
+
+        public static AccessTokenHandle FromThreadHandle(TMThreadHandle hThread, params TokenAccess[] desiredAccess)
+        {
+            var defaultAccess = TokenAccess.TOKEN_ALL_ACCESS;
+            uint combinedAccess = (uint)defaultAccess;
+            if (desiredAccess.Length > 0)
+                combinedAccess = (uint)(new List<TokenAccess>(desiredAccess).Aggregate((x, y) => x | y));
+
+            IntPtr hToken;
+            if(!Advapi32.OpenThreadToken(hThread.Handle, combinedAccess, false, out hToken))
+            {
+                Logger.GetInstance().Error($"Failed to retrieve handle to processes access token. OpenThreadToken failed with error: {Kernel32.GetLastError()}");
+                throw new OpenThreadTokenException();
+            }
+
+            if (desiredAccess.Length > 0)
+                return new AccessTokenHandle(hToken, desiredAccess);
+            else
+                return new AccessTokenHandle(hToken, defaultAccess);
         }
     }
 }

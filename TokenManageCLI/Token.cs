@@ -32,6 +32,12 @@ namespace TokenManageCLI
         [Option("privileges", Required = false, HelpText = "Show privileges")]
         public bool ShowPrivileges { get; set; }
 
+        [Option("owner", Required = false, HelpText = "Show the user who will become owner of any objects created by the process using this access token.")]
+        public bool ShowOwner { get; set; }
+
+        [Option("primarygroup", Required = false, HelpText = "Show the primary group of any objects created by the process using this access token.")]
+        public bool ShowPrimaryGroup { get; set; }
+
         [Option('a', "all", Required = false, HelpText = "Show all available information")]
         public bool ShowAll { get; set; }
     }
@@ -80,6 +86,16 @@ namespace TokenManageCLI
                 ShowLogonSid(hToken);
             }
 
+            if (this.options.ShowOwner || this.options.ShowAll)
+            {
+                ShowOwner(hToken);
+            }
+
+            if (this.options.ShowPrimaryGroup || this.options.ShowAll)
+            {
+                ShowPrimaryGroup(hToken);
+            }
+
             if (this.options.ShowSessionID || this.options.ShowAll)
             {
                 ShowSessionID(hToken);
@@ -101,7 +117,7 @@ namespace TokenManageCLI
             var groups = AccessTokenGroups.FromTokenHandle(hToken);
             console.WriteLine("[GROUPS]");
             console.WriteLine("");
-            foreach (var group in groups.GetGroups())
+            foreach (var group in groups.GetGroupEnumerator())
             {
                 var msg = $"{group.Domain}\\{group.Name}";
                 console.WriteLine(msg);
@@ -141,6 +157,23 @@ namespace TokenManageCLI
                 var enabledText = priv.IsEnabled() ? "Enabled" : "Disabled";
                 console.WriteLine($"{priv.Name}: {enabledText}");
             }
+            console.WriteLine("");
+        }
+        
+        private void ShowOwner(AccessTokenHandle hToken)
+        {
+            var owner = AccessTokenOwner.FromTokenHandle(hToken);
+            console.WriteLine("[OWNER]");
+            console.WriteLine("");
+            console.WriteLine($"{owner.Domain}\\{owner.Username} : {owner.Type.ToString()}");
+            console.WriteLine("");
+        }
+        private void ShowPrimaryGroup(AccessTokenHandle hToken)
+        {
+            var group = AccessTokenPrimaryGroup.FromTokenHandle(hToken);
+            console.WriteLine("[PRIMARY GROUP]");
+            console.WriteLine("");
+            console.WriteLine($"{group.Domain}\\{group.Name} : {group.Type.ToString()}");
             console.WriteLine("");
         }
     }

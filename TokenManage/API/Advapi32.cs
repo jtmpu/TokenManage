@@ -162,7 +162,13 @@ namespace TokenManage.API
         // SetThreadToken
         [DllImport("advapi32.dll", SetLastError = true)]
         public static extern bool SetThreadToken(IntPtr pHandle, IntPtr hToken);
-
+        
+        [DllImport("advapi32.dll", SetLastError = true)]
+        public static extern bool OpenThreadToken(
+            IntPtr ThreadHandle,
+            uint DesiredAccess,
+            bool OpenAsSelf,
+            out IntPtr TokenHandle);
 
     }
 }
