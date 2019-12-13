@@ -52,38 +52,101 @@ namespace TokenManage
             info.Append("\n");
             info.Append("[PRIVILEGES]");
             info.Append("\n");
-            foreach (var priv in privileges.GetPrivileges())
-            {
-                var enabled = priv.Attributes == Constants.SE_PRIVILEGE_ENABLED ? "Enabled" : "Disabled";
-                info.Append($"{priv.Name}: {enabled}\n");
-
-            }
+            info.Append(privileges.ToOutputString());
             info.Append("\n");
             return info.ToString();
         }
 
         #region Privileges
 
-        public static void EnablePrivilege(string privilege)
+        public static void EnableProcessPrivilege(string privilege)
         {
-            SetPrivilege(privilege, true);
+            SetProcessPrivilege(privilege, true);
         }
 
-        public static void DisablePrivilege(string privilege)
+        public static void DisableProcessPrivilege(string privilege)
         {
-            SetPrivilege(privilege, false);
+            SetProcessPrivilege(privilege, false);
         }
 
-        public static void SetPrivilege(string privilege, bool enabled)
+        public static void SetProcessPrivilege(string privilege, bool enabled)
         {
             var hProc = TMProcessHandle.GetCurrentProcessHandle();
             var hToken = AccessTokenHandle.FromProcessHandle(hProc, TokenAccess.TOKEN_ADJUST_PRIVILEGES);
+            SetPrivilege(hToken, privilege, enabled);
+        }
 
+        public static void EnabledThreadPrivilege(string privilege)
+        {
+            SetThreadPrivilege(privilege, true);
+        }
+        public static void DisableThreadPrivilege(string privilege)
+        {
+            SetThreadPrivilege(privilege, false);
+        }
+
+        public static void SetThreadPrivilege(string privilege, bool enabled)
+        {
+            var hThread = TMThreadHandle.GetCurrentThreadHandle();
+            var hToken = AccessTokenHandle.FromThreadHandle(hThread);
+            SetPrivilege(hToken, privilege, enabled);
+        }
+
+        public static void SetPrivilege(AccessTokenHandle handle, string privilege, bool enabled)
+        {
             var newPrivs = new List<ATPrivilege>();
             var attributes = (uint)(enabled ? Constants.SE_PRIVILEGE_ENABLED : Constants.SE_PRIVILEGE_DISABLED);
             newPrivs.Add(ATPrivilege.FromValues(privilege, attributes));
 
-            AccessTokenPrivileges.AdjustTokenPrivileges(hToken, newPrivs);
+            AccessTokenPrivileges.AdjustTokenPrivileges(handle, newPrivs);
+        }
+
+        public static void EnableAllThreadPrivileges()
+        {
+            var hThread = TMThreadHandle.GetCurrentThreadHandle();
+            var hToken = AccessTokenHandle.FromThreadHandle(hThread);
+            SetAllPrivileges(hToken, true);
+        }
+        public static void DisableAllThreadPrivileges()
+        {
+            var hThread = TMThreadHandle.GetCurrentThreadHandle();
+            var hToken = AccessTokenHandle.FromThreadHandle(hThread);
+            SetAllPrivileges(hToken, false);
+        }
+
+        public static void DisableAllProcessPrivileges()
+        {
+            var hProc = TMProcessHandle.GetCurrentProcessHandle();
+            var hToken = AccessTokenHandle.FromProcessHandle(hProc);
+            SetAllPrivileges(hToken, false);
+        }
+        public static void EnableAllProcessPrivileges()
+        {
+            var hProc = TMProcessHandle.GetCurrentProcessHandle();
+            var hToken = AccessTokenHandle.FromProcessHandle(hProc);
+            SetAllPrivileges(hToken, true);
+        }
+
+        /// <summary>
+        /// Retrieves all current thread privileges, and enables the
+        /// ones that are possible.
+        /// </summary>
+        public static void SetAllPrivileges(AccessTokenHandle hToken, bool enabled)
+        {
+            foreach(var priv in Enum.GetNames(typeof(PrivilegeConstants)))
+            {
+                var attributes = enabled ? Constants.SE_PRIVILEGE_ENABLED : Constants.SE_PRIVILEGE_DISABLED;
+                var newPriv = new List<ATPrivilege>();
+                newPriv.Add(ATPrivilege.FromValues(priv, (uint)attributes));
+                try
+                {
+                    AccessTokenPrivileges.AdjustTokenPrivileges(hToken, newPriv);
+                }
+                catch
+                {
+                    continue;
+                }
+            }
         }
 
         #endregion
