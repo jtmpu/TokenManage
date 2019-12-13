@@ -21,6 +21,8 @@ namespace TokenManageCLI
 
         [Option('p', "privilege", Required = false, HelpText = "List processes with this privilege enabled")]
         public string Privilege { get; set; }
+        [Option("disabled", Default = false, Required = false, HelpText = "List processes with the privilege disabled" )]
+        public bool Disabled { get; set;  }
 
     }
     public class Info
@@ -111,7 +113,8 @@ namespace TokenManageCLI
                         {
                             if(priv.Name.ToLower().Contains(this.options.Privilege.ToLower()))
                             {
-                                if (priv.Attributes == Constants.SE_PRIVILEGE_ENABLED)
+                                var attrib = this.options.Disabled ? Constants.SE_PRIVILEGE_DISABLED : Constants.SE_PRIVILEGE_ENABLED;
+                                if (priv.Attributes == attrib)
                                 {
                                     console.WriteLine($"FOUND: {proc.ProcessName} - {proc.ProcessId}");
                                 }
