@@ -19,8 +19,7 @@ namespace TokenManage
         {
             var hProc = TMProcessHandle.GetCurrentProcessHandle();
             var hToken = AccessTokenHandle.FromProcessHandle(hProc);
-            var user = AccessTokenUser.FromTokenHandle(hToken);
-            return GetAccessTokenInfo(hToken);
+            return new AccessTokenInformation(hToken).ToOutputString();
         }
 
         /// <summary>
@@ -31,8 +30,7 @@ namespace TokenManage
         {
             var hThread = TMThreadHandle.GetCurrentThreadHandle();
             var hToken = AccessTokenHandle.FromThreadHandle(hThread);
-            var user = AccessTokenUser.FromTokenHandle(hToken);
-            return GetAccessTokenInfo(hToken);
+            return new AccessTokenInformation(hToken).ToOutputString();
         }
 
         private static string GetAccessTokenInfo(AccessTokenHandle hToken)

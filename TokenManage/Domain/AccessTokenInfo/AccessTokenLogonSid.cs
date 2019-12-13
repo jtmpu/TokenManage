@@ -45,6 +45,16 @@ namespace TokenManage.Domain.AccessTokenInfo
             return ret;
         }
 
+        public string ToOutputString()
+        {
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < sidStrings.Length; i++)
+            {
+                sb.Append($"{sidStrings[i]}: {sidAttributes[i]}");
+            }
+            return sb.ToString();
+        }
+
         /// <summary>
         /// Apparently, this cannot be done, and always returns the error
         /// code 87.

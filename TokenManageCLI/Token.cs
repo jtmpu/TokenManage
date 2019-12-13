@@ -108,7 +108,7 @@ namespace TokenManageCLI
             var user = AccessTokenUser.FromTokenHandle(hToken);
             console.WriteLine("[USERNAME]");
             console.WriteLine("");
-            console.WriteLine($"{user.Domain}\\{user.Username}");
+            console.WriteLine(user.ToOutputString());
             console.WriteLine("");
         }
 
@@ -117,11 +117,7 @@ namespace TokenManageCLI
             var groups = AccessTokenGroups.FromTokenHandle(hToken);
             console.WriteLine("[GROUPS]");
             console.WriteLine("");
-            foreach (var group in groups.GetGroupEnumerator())
-            {
-                var msg = $"{group.Domain}\\{group.Name}";
-                console.WriteLine(msg);
-            }
+            console.WriteLine(groups.ToOutputString());
             console.WriteLine("");
         }
 
@@ -130,10 +126,7 @@ namespace TokenManageCLI
             var logonSid = AccessTokenLogonSid.FromTokenHandle(hToken);
             console.WriteLine("[LOGON SID]");
             console.WriteLine("");
-            foreach (var sid in logonSid.GetLogonSidStrings())
-            {
-                console.WriteLine(sid);
-            }
+            console.WriteLine(logonSid.ToOutputString());
             console.WriteLine("");
         }
 
@@ -142,7 +135,7 @@ namespace TokenManageCLI
             var sessionId = AccessTokenSessionId.FromTokenHandle(hToken);
             console.WriteLine("[SESSION ID]");
             console.WriteLine("");
-            console.WriteLine(sessionId.SessionId.ToString());
+            console.WriteLine(sessionId.ToOutputString());
             console.WriteLine("");
 
         }
@@ -152,11 +145,7 @@ namespace TokenManageCLI
             var privileges = AccessTokenPrivileges.FromTokenHandle(hToken);
             console.WriteLine("[PRIVILEGES]");
             console.WriteLine("");
-            foreach(var priv in privileges.GetPrivileges())
-            {
-                var enabledText = priv.IsEnabled() ? "Enabled" : "Disabled";
-                console.WriteLine($"{priv.Name}: {enabledText}");
-            }
+            console.WriteLine(privileges.ToOutputString());
             console.WriteLine("");
         }
         
@@ -165,7 +154,7 @@ namespace TokenManageCLI
             var owner = AccessTokenOwner.FromTokenHandle(hToken);
             console.WriteLine("[OWNER]");
             console.WriteLine("");
-            console.WriteLine($"{owner.Domain}\\{owner.Username} : {owner.Type.ToString()}");
+            console.WriteLine(owner.ToOutputString());
             console.WriteLine("");
         }
         private void ShowPrimaryGroup(AccessTokenHandle hToken)
@@ -173,7 +162,7 @@ namespace TokenManageCLI
             var group = AccessTokenPrimaryGroup.FromTokenHandle(hToken);
             console.WriteLine("[PRIMARY GROUP]");
             console.WriteLine("");
-            console.WriteLine($"{group.Domain}\\{group.Name} : {group.Type.ToString()}");
+            console.WriteLine(group.ToOutputString());
             console.WriteLine("");
         }
     }

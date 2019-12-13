@@ -23,6 +23,14 @@ namespace TokenManage.Domain.AccessTokenInfo
             this.Type = peUse;
         }
 
+        public string ToOutputString()
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.Append($"{Domain}\\{Name}");
+            return sb.ToString();
+
+        }
+
         public static AccessTokenPrimaryGroup FromTokenHandle(AccessTokenHandle handle)
         {
             uint tokenInfLength = 0;

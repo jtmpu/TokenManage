@@ -24,6 +24,16 @@ namespace TokenManage.Domain.AccessTokenInfo
             }
         }
 
+        public string ToOutputString()
+        {
+            StringBuilder sb = new StringBuilder();
+            foreach(var group in groups)
+            {
+                sb.Append($"{group.Domain}\\{group.Domain}\n");
+            }
+            return sb.ToString();
+        }
+
         public static AccessTokenGroups FromTokenHandle(AccessTokenHandle handle)
         {
             uint tokenInfLength = 0;

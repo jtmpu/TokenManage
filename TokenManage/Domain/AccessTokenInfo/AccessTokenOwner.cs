@@ -22,6 +22,13 @@ namespace TokenManage.Domain.AccessTokenInfo
             this.Type = peUse;
         }
 
+        public string ToOutputString()
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.Append($"{Domain}\\{Username}");
+            return sb.ToString();
+        }
+
         public static AccessTokenOwner FromTokenHandle(AccessTokenHandle handle)
         {
             uint tokenInfLength = 0;

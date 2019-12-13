@@ -21,6 +21,13 @@ namespace TokenManage.Domain.AccessTokenInfo
             this.Type = t;
         }
 
+        public string ToOutputString()
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.Append($"{Domain}\\{Username}");
+            return sb.ToString();
+        }
+
         public static AccessTokenUser FromTokenHandle(AccessTokenHandle handle)
         {
             uint tokenInfLength = 0;
