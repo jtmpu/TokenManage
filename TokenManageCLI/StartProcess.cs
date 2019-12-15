@@ -6,6 +6,7 @@ using TokenManage.Domain;
 using TokenManage.Domain.AccessTokenInfo;
 using TokenManage.API;
 using System.Collections.Generic;
+using TokenManage.Logic;
 
 namespace TokenManageCLI
 {
@@ -27,6 +28,15 @@ namespace TokenManageCLI
 
         [Option('n', "session", Required = false, HelpText = "Starts a process using the token connected to the specified session id.")]
         public uint SessionId { get; set; }
+
+        [Option('i', "impersonate", Default = false, Required = false, HelpText = "Use CreateProcessWithTokenW (Requires SE_IMPERSONATE). Otherwise, this uses CreateProcessAsUser (requiring SE_ASSIGNPRIMARYTOKEN and SE_INCREASEQUOTA).")]
+        public bool UseImpersonate { get; set; }
+
+        [Option('e', "enableall", Default = false, HelpText = "Ensure that all possible privileges are enabled.", Required = false)]
+        public bool EnabledAllPossiblePrivileges { get; set; }
+
+        [Option("samesession", Default = false, HelpText = "Ensure the access tokens have the same session id", Required = false)]
+        public bool SameSessionId { get; set; }
     }
 
     public class StartProcess
@@ -46,7 +56,33 @@ namespace TokenManageCLI
         {
             if(this.options.ProcessID.HasValue)
             {
-                BorrowProcessToken(this.options.ProcessID.Value);
+                var applicationName = this.options.ApplicationName;
+                if (applicationName == null)
+                    applicationName = @"C:\Windows\System32\cmd.exe";
+
+                var builder = new TMProcessBuilder().
+                    SetApplication(applicationName).
+                    SetCommandLine(this.options.CommandLine).
+                    UsingExistingProcessToken(this.options.ProcessID.Value);
+
+                if (this.options.EnabledAllPossiblePrivileges)
+                    builder.EnableAllPrivileges();
+
+                if (this.options.SameSessionId)
+                    builder.EnsureSameSesssionId();
+
+                if (this.options.UseImpersonate)
+                {
+                    console.Debug("Starting with CreateProcessWithTokenW");
+                    builder.WithCreateProcessWithToken();
+                }
+                else
+                {
+                    console.Debug("Starting with CreateProcessAsUser");
+                    builder.WithCreateProcessAsUser();
+                }
+
+                builder.Create();
             }
             else if(this.options.System)
             {

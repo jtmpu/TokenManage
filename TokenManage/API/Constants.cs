@@ -11,7 +11,8 @@ namespace TokenManage.API
 
         public const int SE_PRIVILEGE_ENABLED = 0x00000002;
         public const int SE_PRIVILEGE_DISABLED = 0x00000000;
-        public const int SE_PRIVILEGE_REMOVED = 0x00000003;
+        public const int SE_PRIVILEGE_ENABLED_BY_DEFAULT = 0x00000001;
+        public const int SE_PRIVILEGE_REMOVED = 0x00000004;
         public const UInt32 STANDARD_RIGHTS_REQUIRED = 0x000F0000;
         public const UInt32 STANDARD_RIGHTS_READ = 0x00020000;
         public const UInt32 TOKEN_ASSIGN_PRIMARY = 0x0001;

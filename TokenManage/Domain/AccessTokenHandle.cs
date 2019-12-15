@@ -210,5 +210,17 @@ namespace TokenManage.Domain
             else
                 return new AccessTokenHandle(hToken, defaultAccess);
         }
+
+        public static AccessTokenHandle GetCurrentThreadTokenHandle(params TokenAccess[] desiredAccess)
+        {
+            var hThread = TMThreadHandle.GetCurrentThreadHandle();
+            return AccessTokenHandle.FromThreadHandle(hThread);
+        }
+
+        public static AccessTokenHandle GetCurrentProcessTokenHandle(params TokenAccess[] desiredAccess)
+        {
+            var hProc = TMProcessHandle.GetCurrentProcessHandle();
+            return AccessTokenHandle.FromProcessHandle(hProc);
+        }
     }
 }

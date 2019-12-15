@@ -21,27 +21,65 @@ namespace TokenManage.Domain.AccessTokenInfo
             return this.privileges;
         }
 
+        public bool IsPrivilegeEnabled(PrivilegeConstants privilege)
+        {
+            return IsPrivilegeEnabled(privilege.ToString());
+        }
+
+        public bool IsPrivilegeEnabled(string privilege)
+        {
+            foreach(var priv in this.privileges)
+            {
+                if(priv.Name.ToLower().Equals(privilege.ToLower()))
+                {
+                    var enabled = priv.Attributes & Constants.SE_PRIVILEGE_ENABLED;
+                    return this.IsEnabled(priv.Attributes);
+                }
+            }
+            return false;
+        }
+
+        private bool IsEnabled(uint attributes)
+        {
+            return (attributes & Constants.SE_PRIVILEGE_ENABLED) == Constants.SE_PRIVILEGE_ENABLED;
+        }
+        private bool IsDisabled(uint attributes)
+        {
+            return attributes  == Constants.SE_PRIVILEGE_DISABLED;
+        }
+        private bool IsRemoved(uint attributes)
+        {
+            return (attributes & Constants.SE_PRIVILEGE_REMOVED) == Constants.SE_PRIVILEGE_REMOVED;
+        }
+
+        private bool IsEnabledByDefault(uint attributes)
+        {
+            return (attributes & Constants.SE_PRIVILEGE_ENABLED_BY_DEFAULT) == Constants.SE_PRIVILEGE_ENABLED_BY_DEFAULT;
+        }
+
         public string ToOutputString()
         {
             StringBuilder sb = new StringBuilder();
             foreach(var priv in privileges)
             {
                 var status = "";
-                switch (priv.Attributes)
+                if(IsEnabled(priv.Attributes))
                 {
-                    case Constants.SE_PRIVILEGE_ENABLED:
-                        status = "Enabled";
-                        break;
-                    case Constants.SE_PRIVILEGE_DISABLED:
-                        status = "Disabled";
-                        break;
-                    case Constants.SE_PRIVILEGE_REMOVED:
-                        status = "Removed";
-                        break;
-                    default:
-                        status = "Unknown";
-                        break;
+                    status += "Enabled ";
                 }
+                if (IsDisabled(priv.Attributes))
+                {
+                    status += "Disabled ";
+                }
+                if(IsRemoved(priv.Attributes))
+                {
+                    status += "Removed ";
+                }
+                if(IsEnabledByDefault(priv.Attributes))
+                {
+                    status += " (Enabled by default)";
+                }
+
                 sb.Append($"{priv.Name}: {status} ({priv.Attributes})\n");
             }
             return sb.ToString();

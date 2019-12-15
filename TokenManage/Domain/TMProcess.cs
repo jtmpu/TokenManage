@@ -18,6 +18,12 @@ namespace TokenManage.Domain
             this.ProcessId = process.Id;
         }
 
+        private TMProcess(string processName, int pid)
+        {
+            this.ProcessName = processName;
+            this.ProcessId = pid;
+        }
+
         public static List<TMProcess> GetProcessByName(string name)
         {
             Process[] processes = Process.GetProcessesByName(name);
@@ -37,6 +43,11 @@ namespace TokenManage.Domain
         {
             List<Process> processes = new List<Process>(Process.GetProcesses());
             return processes.Select(x => new TMProcess(x)).ToList();
+        }
+
+        public static TMProcess FromValues(string processName, int pid)
+        {
+            return new TMProcess(processName, pid);
         }
     }
 }
