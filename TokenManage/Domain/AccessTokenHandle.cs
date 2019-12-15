@@ -55,6 +55,55 @@ namespace TokenManage.Domain
             return handle;
         }
 
+        public AccessTokenHandle DuplicatePrimaryToken(params TokenAccess[] desiredAccess)
+        {
+            var defaultAccess = TokenAccess.TOKEN_ALL_ACCESS;
+            uint combinedAccess = (uint)defaultAccess;
+            if (desiredAccess.Length > 0)
+                combinedAccess = (uint)(new List<TokenAccess>(desiredAccess).Aggregate((x, y) => x | y));
+
+            SECURITY_ATTRIBUTES secAttr = new SECURITY_ATTRIBUTES();
+            secAttr.bInheritHandle = 0;
+            IntPtr hDuplicate;
+            Logger.GetInstance().Debug($"Attempting to duplicate token.");
+            if (!Advapi32.DuplicateTokenEx(this.handle, combinedAccess, ref secAttr,
+                SECURITY_IMPERSONATION_LEVEL.SecurityImpersonation, TOKEN_TYPE.TokenPrimary, out hDuplicate))
+            {
+                Logger.GetInstance().Error($"Failed to duplicate new primary token. DuplicateTokenEx failed with error: {Kernel32.GetLastError()}");
+                throw new DuplicateTokenException();
+            }
+            Logger.GetInstance().Debug($"Successfully duplicated token.");
+
+            if (desiredAccess.Length > 0)
+                return new AccessTokenHandle(hDuplicate, desiredAccess);
+            else
+                return new AccessTokenHandle(hDuplicate, defaultAccess);
+        }
+
+        public AccessTokenHandle DuplicateImpersonationToken(params TokenAccess[] desiredAccess)
+        {
+            var defaultAccess = TokenAccess.TOKEN_ALL_ACCESS;
+            uint combinedAccess = (uint)defaultAccess;
+            if (desiredAccess.Length > 0)
+                combinedAccess = (uint)(new List<TokenAccess>(desiredAccess).Aggregate((x, y) => x | y));
+
+            SECURITY_ATTRIBUTES secAttr = new SECURITY_ATTRIBUTES();
+            IntPtr newToken;
+            Logger.GetInstance().Debug($"Attempting to duplicate token.");
+            if (!Advapi32.DuplicateTokenEx(this.handle, combinedAccess, ref secAttr, 
+                SECURITY_IMPERSONATION_LEVEL.SecurityImpersonation, TOKEN_TYPE.TokenImpersonation, out newToken))
+            {
+                Logger.GetInstance().Error($"Failed to duplicate impersonation token. DuplicateTokenEx failed with error code: {Kernel32.GetLastError()}");
+                throw new DuplicateTokenException();
+            }
+            Logger.GetInstance().Debug($"Successfully duplicated token.");
+
+            if (desiredAccess.Length > 0)
+                return new AccessTokenHandle(newToken, desiredAccess);
+            else
+                return new AccessTokenHandle(newToken, defaultAccess);
+        }
+
         public static AccessTokenHandle FromProcessHandle(TMProcessHandle process, params TokenAccess[] desiredAccess)
         {
             var defaultAccess = TokenAccess.TOKEN_ALL_ACCESS;

@@ -5,6 +5,7 @@ using TokenManage;
 using TokenManage.Domain;
 using TokenManage.Domain.AccessTokenInfo;
 using TokenManage.API;
+using System.Collections.Generic;
 
 namespace TokenManageCLI
 {
@@ -97,21 +98,12 @@ namespace TokenManageCLI
 
         public void BorrowProcessToken(int pid)
         {
-            this.console.Debug($"Attempting to open handle to process with id {pid}");
+            this.Elevate();
 
-            var hProc = TMProcessHandle.FromProcessId(pid, ProcessAccessFlags.QueryInformation);
-
-            this.console.Debug($"Successfully retrieved process handle.");
-
-            uint desiredAccess = Constants.TOKEN_IMPERSONATE;
-            desiredAccess |= Constants.TOKEN_QUERY;
-            desiredAccess |= Constants.TOKEN_DUPLICATE;
-            desiredAccess |= Constants.TOKEN_ASSIGN_PRIMARY;
-            var hToken = AccessTokenHandle.FromProcessHandle(hProc, TokenAccess.TOKEN_IMPERSONATE,
-                TokenAccess.TOKEN_QUERY, TokenAccess.TOKEN_DUPLICATE, TokenAccess.TOKEN_ASSIGN_PRIMARY);
-            this.console.Debug($"Successfully retrieved process access token handle.");
-
-            var hDuplicate = AccessTokenHandle.Duplicate(hToken, SECURITY_IMPERSONATION_LEVEL.SecurityImpersonation, TOKEN_TYPE.TokenPrimary, TokenAccess.TOKEN_ALL_ACCESS);
+            var hProc = TMProcessHandle.FromProcessId(pid);
+            var hToken = AccessTokenHandle.FromProcessHandle(hProc, TokenAccess.TOKEN_ALL_ACCESS);
+            this.console.Debug($"Duplicating access token.");
+            var hDuplicate = hToken.DuplicatePrimaryToken();
 
             STARTUPINFO si = new STARTUPINFO();
             PROCESS_INFORMATION pi;
@@ -122,11 +114,57 @@ namespace TokenManageCLI
                 applicationName = this.options.ApplicationName;
             }
             this.console.Debug($"Starting with application: {applicationName}");
-
-            if (!Advapi32.CreateProcessWithTokenW(hDuplicate.GetHandle(), LogonFlags.NetCredentialsOnly, applicationName, this.options.CommandLine, CreationFlags.NewConsole, IntPtr.Zero, @"C:\", ref si, out pi))
+            SECURITY_ATTRIBUTES saProcessAttributes = new SECURITY_ATTRIBUTES();
+            SECURITY_ATTRIBUTES saThreadAttributes = new SECURITY_ATTRIBUTES();
+            if (!Advapi32.CreateProcessAsUser(hDuplicate.GetHandle(), applicationName, this.options.CommandLine, ref saProcessAttributes, 
+                ref saThreadAttributes, false, 0, IntPtr.Zero, null, ref si, out pi))
             {
-                this.console.Error($"Failed to create shell. CreateProcessWithTokenW failed with error code: {Kernel32.GetLastError()}");
-                return;
+                this.console.Error($"Failed to create shell. CreateProcessAsUser failed with error code: {Kernel32.GetLastError()}");
+            }
+
+            this.Revert();
+        }
+
+        private void Elevate()
+        {
+            // 1. Enable debug privileges for our process.
+            var hProc = TMProcessHandle.GetCurrentProcessHandle();
+            var hToken = AccessTokenHandle.FromProcessHandle(hProc, TokenAccess.TOKEN_QUERY, TokenAccess.TOKEN_ADJUST_PRIVILEGES);
+            var newPriv = new List<ATPrivilege>();
+            newPriv.Add(ATPrivilege.FromValues(PrivilegeConstants.SeDebugPrivilege.ToString(), Constants.SE_PRIVILEGE_ENABLED));
+            AccessTokenPrivileges.AdjustTokenPrivileges(hToken, newPriv);
+
+            // 2. Retrieve impersonation token for a LocalSystem process.
+            hProc = TMProcessHandle.FromProcess(TMProcess.GetProcessById(3644), ProcessAccessFlags.QueryInformation);
+            hToken = AccessTokenHandle.FromProcessHandle(hProc, TokenAccess.TOKEN_IMPERSONATE, TokenAccess.TOKEN_DUPLICATE, TokenAccess.TOKEN_QUERY);
+            if(!Advapi32.ImpersonateLoggedOnUser(hToken.GetHandle()))
+            {
+                this.console.Error($"Failed to impersonate local system. ImpersonateLoggedOnUser failed with error: {Kernel32.GetLastError()}");
+                throw new Exception();
+            }
+
+            hToken = AccessTokenHandle.FromThreadHandle(TMThreadHandle.GetCurrentThreadHandle());
+            newPriv = new List<ATPrivilege>();
+            newPriv.Add(ATPrivilege.FromValues(PrivilegeConstants.SeTcbPrivilege.ToString(), Constants.SE_PRIVILEGE_ENABLED));
+            AccessTokenPrivileges.AdjustTokenPrivileges(hToken, newPriv);
+
+
+            hToken = AccessTokenHandle.FromThreadHandle(TMThreadHandle.GetCurrentThreadHandle());
+            var user = AccessTokenUser.FromTokenHandle(hToken);
+            console.WriteLine($"{user.Domain}\\{user.Username}");
+            var privileges = AccessTokenPrivileges.FromTokenHandle(hToken);
+            foreach (var priv in privileges.GetPrivileges())
+            {
+                console.WriteLine($"{priv.Name}: {priv.Attributes}");
+            }
+        }
+
+        private void Revert()
+        {
+            if(!Advapi32.RevertToSelf())
+            {
+                this.console.Error($"Failed to revert to self. RevertToSelf failed with error: {Kernel32.GetLastError()}");
+                throw new Exception();
             }
         }
     }

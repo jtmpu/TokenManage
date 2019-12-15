@@ -121,6 +121,12 @@ namespace TokenManage.Domain.AccessTokenInfo
                 Logger.GetInstance().Error(msg);
                 throw new AdjustTokenPrivilegeException(msg);
             }
+
+            var err = Kernel32.GetLastError();
+            if(err == Constants.ERROR_NOT_ALL_ASSIGNED)
+            {
+                Logger.GetInstance().Error("Not all privileges or groups referenced are assigned to the caller.");
+            }
         }
     }
 

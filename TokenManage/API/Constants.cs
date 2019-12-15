@@ -6,6 +6,7 @@ namespace TokenManage.API
 {
     public class Constants
     {
+        public const int ERROR_NOT_ALL_ASSIGNED = 1300;
         public const int ERROR_INSUFFICIENT_BUFFER = 122;
 
         public const int SE_PRIVILEGE_ENABLED = 0x00000002;

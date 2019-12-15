@@ -99,8 +99,7 @@ namespace TokenManage
             var hProc = TMProcessHandle.FromProcessId(pid, ProcessAccessFlags.QueryInformation);
             var hToken = AccessTokenHandle.FromProcessHandle(hProc, TokenAccess.TOKEN_IMPERSONATE, TokenAccess.TOKEN_DUPLICATE);
 
-            var hDuplicate = AccessTokenHandle.Duplicate(hToken, SECURITY_IMPERSONATION_LEVEL.SecurityImpersonation, 
-                TOKEN_TYPE.TokenImpersonation, TokenAccess.TOKEN_ALL_ACCESS);
+            var hDuplicate = hToken.DuplicateImpersonationToken(TokenAccess.TOKEN_ALL_ACCESS);
 
             if(!Advapi32.SetThreadToken(IntPtr.Zero, hDuplicate.GetHandle()))
             {

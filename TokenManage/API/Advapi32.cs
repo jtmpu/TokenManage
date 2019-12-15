@@ -99,6 +99,20 @@ namespace TokenManage.API
             [In] ref STARTUPINFO lpStartupInfo,
             out PROCESS_INFORMATION lpProcessInformation);
 
+        [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        public static extern bool CreateProcessAsUser(
+            IntPtr hToken,
+            string lpApplicationName,
+            string lpCommandLine,
+            ref SECURITY_ATTRIBUTES lpProcessAttributes,
+            ref SECURITY_ATTRIBUTES lpThreadAttributes,
+            bool bInheritHandles,
+            uint dwCreationFlags,
+            IntPtr lpEnvironment,
+            string lpCurrentDirectory,
+            ref STARTUPINFO lpStartupInfo,
+            out PROCESS_INFORMATION lpProcessInformation);
+
         [DllImport("advapi32.dll", SetLastError = true)]
         public static extern bool GetTokenInformation(
             IntPtr TokenHandle,
