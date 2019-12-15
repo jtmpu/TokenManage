@@ -19,6 +19,11 @@ namespace TokenManageCLI
         [Option('t', "test", Required = false, HelpText = "Test")]
         public bool Test { get; set; }
 
+        [Option('p', "privilege", Required = false, HelpText = "List processes with this privilege enabled")]
+        public string Privilege { get; set; }
+        [Option("disabled", Default = false, Required = false, HelpText = "List processes with the privilege disabled" )]
+        public bool Disabled { get; set;  }
+
     }
     public class Info
     {
@@ -93,6 +98,34 @@ namespace TokenManageCLI
                 }
 
                 console.Write(output.ToString());
+            }
+            if(this.options.Privilege != null)
+            {
+                var processes = TMProcess.GetAllProcesses();
+                foreach(var proc in processes)
+                {
+                    try
+                    {
+                        var hProc = TMProcessHandle.FromProcess(proc, ProcessAccessFlags.QueryInformation);
+                        var hToken = AccessTokenHandle.FromProcessHandle(hProc, TokenAccess.TOKEN_QUERY);
+                        var privileges = AccessTokenPrivileges.FromTokenHandle(hToken);
+                        foreach(var priv in privileges.GetPrivileges())
+                        {
+                            if(priv.Name.ToLower().Contains(this.options.Privilege.ToLower()))
+                            {
+                                var attrib = this.options.Disabled ? Constants.SE_PRIVILEGE_DISABLED : Constants.SE_PRIVILEGE_ENABLED;
+                                if (priv.Attributes == attrib)
+                                {
+                                    console.WriteLine($"FOUND: {proc.ProcessName} - {proc.ProcessId}");
+                                }
+                            }
+                        }
+                    }
+                    catch
+                    {
+
+                    }
+                }
             }
         }
 

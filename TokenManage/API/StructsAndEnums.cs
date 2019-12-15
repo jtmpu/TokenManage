@@ -229,8 +229,7 @@ namespace TokenManage.API
         SeTcbPrivilege,
         SeTimeZonePrivilege,
         SeTrustedCredManAccessPrivilege,
-        SeUndockPrivilege,
-        SeUnsolicitedInputPrivilege
+        SeUndockPrivilege
     }
 
     public enum SID_NAME_USE

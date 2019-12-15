@@ -2,68 +2,104 @@
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
+using TokenManage.Domain.AccessTokenInfo;
 using TokenManage.API;
 
 namespace TokenManage.Domain
 {
+    /// <summary>
+    /// A representation of all possible available information
+    /// for an access token. If it's not possible to retrieve
+    /// the specified information for a token, this just ignores it.
+    /// </summary>
     public class AccessTokenInformation
     {
-        public Dictionary<String, bool> privileges { get; }
-        public string User { get; }
-        public List<string> Groups { get; }
 
-        private AccessTokenInformation(string user)
+        private AccessTokenGroups _groups;
+        private AccessTokenLogonSid _logonSid;
+        private AccessTokenOwner _owner;
+        private AccessTokenPrimaryGroup _primaryGroup;
+        private AccessTokenPrivileges _privileges;
+        private AccessTokenSessionId _sessionId;
+        private AccessTokenUser _user;
+
+        public AccessTokenInformation(AccessTokenHandle handle)
         {
-            this.User = user;
-        }
-
-        public static AccessTokenInformation FromHandle(AccessTokenHandle handle)
-        {
-            var user = GetTokenUser(handle);
-            return new AccessTokenInformation(user);
-        }
-
-        private static string GetTokenUser(AccessTokenHandle handle)
-        {
-            uint tokenInfLength = 0;
-            bool success;
-
-            IntPtr hToken = handle.GetHandle();
-
-            success = Advapi32.GetTokenInformation(hToken, TOKEN_INFORMATION_CLASS.TokenUser, IntPtr.Zero, tokenInfLength, out tokenInfLength);
-            IntPtr tokenInfo = Marshal.AllocHGlobal(Convert.ToInt32(tokenInfLength));
-            success = Advapi32.GetTokenInformation(hToken, TOKEN_INFORMATION_CLASS.TokenUser, tokenInfo, tokenInfLength, out tokenInfLength);
-
-            var processTokenUser = "";
-            if (success)
+            try
             {
-                TOKEN_USER tokenUser = (TOKEN_USER)Marshal.PtrToStructure(tokenInfo, typeof(TOKEN_USER));
-                int length = Convert.ToInt32(Advapi32.GetLengthSid(tokenUser.User.Sid));
-                byte[] sid = new byte[length];
-                Marshal.Copy(tokenUser.User.Sid, sid, 0, length);
-
-                StringBuilder sbUser = new StringBuilder();
-                uint cchName = (uint)sbUser.Capacity;
-                StringBuilder sbDomain = new StringBuilder();
-                uint cchReferencedDomainName = (uint)sbDomain.Capacity;
-                SID_NAME_USE peUse;
-                if (Advapi32.LookupAccountSid(null, sid, sbUser, ref cchName, sbDomain, ref cchReferencedDomainName, out peUse))
-                {
-                    processTokenUser = $"{sbDomain.ToString()}\\{sbUser.ToString()}";
-                }
-                else
-                {
-                    Logger.GetInstance().Error($"Failed to retrieve user for access token. LookupAccountSid failed with error: {Kernel32.GetLastError()}");
-                    processTokenUser = "";
-                }
+                this._groups = AccessTokenGroups.FromTokenHandle(handle);
             }
-            else
+            catch { }
+            try
             {
-                Logger.GetInstance().Error($"Failed to retreive token information for access token. GetTokenInformation failed with error: {Kernel32.GetLastError()}");
+                this._logonSid = AccessTokenLogonSid.FromTokenHandle(handle);
             }
+            catch { }
+            try
+            {
+                this._owner = AccessTokenOwner.FromTokenHandle(handle);
+            }
+            catch { }
+            try
+            {
+                this._primaryGroup = AccessTokenPrimaryGroup.FromTokenHandle(handle);
+            }
+            catch { }
+            try
+            {
+                this._primaryGroup = AccessTokenPrimaryGroup.FromTokenHandle(handle);
+            }
+            catch { }
+            try
+            {
+                this._privileges = AccessTokenPrivileges.FromTokenHandle(handle);
+            }
+            catch { }
+            try
+            {
+                this._sessionId = AccessTokenSessionId.FromTokenHandle(handle);
+            }
+            catch { }
+            try
+            {
+                this._user = AccessTokenUser.FromTokenHandle(handle);
+            }
+            catch { }
+        }
+    
 
-            Marshal.FreeHGlobal(tokenInfo);
-            return processTokenUser;
+        public string ToOutputString()
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.Append("[USER]\n");
+            sb.Append(this._user?.ToOutputString());
+            sb.Append("\n");
+            sb.Append("\n");
+            sb.Append("[GROUPS]\n");
+            sb.Append(this._groups?.ToOutputString());
+            sb.Append("\n");
+            sb.Append("\n");
+            sb.Append("[PRIVILEGES]\n");
+            sb.Append(this._privileges?.ToOutputString());
+            sb.Append("\n");
+            sb.Append("\n");
+            sb.Append("[LOGON SID]\n");
+            sb.Append(this._logonSid?.ToOutputString());
+            sb.Append("\n");
+            sb.Append("\n");
+            sb.Append("[SESSION ID]\n");
+            sb.Append(this._sessionId?.ToOutputString());
+            sb.Append("\n");
+            sb.Append("\n");
+            sb.Append("[OWNER]\n");
+            sb.Append(this._owner?.ToOutputString());
+            sb.Append("\n");
+            sb.Append("\n");
+            sb.Append("[PRIMARY GROUP]\n");
+            sb.Append(this._primaryGroup?.ToOutputString());
+            sb.Append("\n");
+            sb.Append("\n");
+            return sb.ToString();
         }
     }
 }

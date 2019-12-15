@@ -16,6 +16,13 @@ namespace TokenManage.Domain.AccessTokenInfo
             this.SessionId = sessionId;
         }
 
+        public string ToOutputString()
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.Append($"{SessionId}");
+            return sb.ToString();
+        }
+
         public static AccessTokenSessionId FromTokenHandle(AccessTokenHandle handle)
         {
             uint tokenInfLength = 0;

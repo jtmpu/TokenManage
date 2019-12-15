@@ -21,6 +21,32 @@ namespace TokenManage.Domain.AccessTokenInfo
             return this.privileges;
         }
 
+        public string ToOutputString()
+        {
+            StringBuilder sb = new StringBuilder();
+            foreach(var priv in privileges)
+            {
+                var status = "";
+                switch (priv.Attributes)
+                {
+                    case Constants.SE_PRIVILEGE_ENABLED:
+                        status = "Enabled";
+                        break;
+                    case Constants.SE_PRIVILEGE_DISABLED:
+                        status = "Disabled";
+                        break;
+                    case Constants.SE_PRIVILEGE_REMOVED:
+                        status = "Removed";
+                        break;
+                    default:
+                        status = "Unknown";
+                        break;
+                }
+                sb.Append($"{priv.Name}: {status} ({priv.Attributes})\n");
+            }
+            return sb.ToString();
+        }
+
         public static AccessTokenPrivileges FromTokenHandle(AccessTokenHandle handle)
         {
             uint tokenInfLength = 0;
@@ -90,6 +116,9 @@ namespace TokenManage.Domain.AccessTokenInfo
         /// Attempts to adjust the specified token's privileges. Only a list of the privileges which
         /// should be changed need to be specified.
         /// Throws an exceptions if the access token privilege adjustment fails.
+        /// 
+        /// NOTE: I currently have a bug here where i can't specify a list of new privileges to add.
+        /// This ONLY works when you only have one privilege in the list.
         /// </summary>
         /// <param name="handle"></param>
         /// <param name="newPrivileges"></param>
@@ -97,6 +126,8 @@ namespace TokenManage.Domain.AccessTokenInfo
         {
             if (newPrivileges.Count == 0)
                 return;
+            if (newPrivileges.Count != 1)
+                throw new AdjustTokenPrivilegeException("Can only specify ONE privilege in the newPrivileges list.");
 
             TOKEN_PRIVILEGES tpNew = new TOKEN_PRIVILEGES();
             tpNew.PrivilegeCount = newPrivileges.Count;
@@ -146,9 +177,70 @@ namespace TokenManage.Domain.AccessTokenInfo
             return this.Attributes == Constants.SE_PRIVILEGE_ENABLED;
         }
 
+        public bool IsRemoved()
+        {
+            return this.Attributes == Constants.SE_PRIVILEGE_REMOVED;
+        }
+
+        public bool IsDisabled()
+        {
+            return this.Attributes == Constants.SE_PRIVILEGE_DISABLED;
+        }
+
         public static ATPrivilege FromValues(string name, uint attributes)
         {
             return new ATPrivilege(name, attributes);
         }
+
+        public static ATPrivilege FromValues(PrivilegeConstants privilege, PrivilegeAttributes attributes)
+        {
+            return ATPrivilege.FromValues(privilege.ToString(), attributes);
+        }
+
+        public static ATPrivilege CreateDisabled(PrivilegeConstants privilege)
+        {
+            return ATPrivilege.FromValues(privilege, PrivilegeAttributes.DISABLED);
+        }
+        public static ATPrivilege CreateDisabled(string privilege)
+        {
+            return ATPrivilege.FromValues(privilege, PrivilegeAttributes.DISABLED);
+        }
+
+        public static ATPrivilege CreateEnabled(string privilege)
+        {
+            return ATPrivilege.FromValues(privilege, PrivilegeAttributes.ENABLED);
+        }
+
+        public static ATPrivilege CreateEnabled(PrivilegeConstants privilege)
+        {
+            return ATPrivilege.FromValues(privilege, PrivilegeAttributes.ENABLED);
+        }
+
+        public static ATPrivilege FromValues(string name, PrivilegeAttributes attributes)
+        {
+            uint attrib = 0;
+            switch(attributes)
+            {
+                case PrivilegeAttributes.REMOVED:
+                    attrib = Constants.SE_PRIVILEGE_REMOVED;
+                    break;
+                case PrivilegeAttributes.ENABLED:
+                    attrib = Constants.SE_PRIVILEGE_ENABLED;
+                    break;
+                case PrivilegeAttributes.DISABLED:
+                    attrib = Constants.SE_PRIVILEGE_DISABLED;
+                    break;
+                default:
+                    throw new Exception("Unkwnon privilege attribute");
+            }
+            return ATPrivilege.FromValues(name, attrib);
+        }
+    }
+
+    public enum PrivilegeAttributes
+    {
+        ENABLED,
+        DISABLED,
+        REMOVED
     }
 }
