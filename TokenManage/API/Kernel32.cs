@@ -9,7 +9,6 @@ namespace TokenManage.API
 {
     public class Kernel32
     {
-
         /// <summary>
         /// Retrieve the error code if a function fails.
         /// </summary>
@@ -46,5 +45,45 @@ namespace TokenManage.API
             ProcessAccessFlags processAccess,
             bool bInheritHandle,
             int processId);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern IntPtr CreateNamedPipe(
+            string lpName, 
+            uint dwOpenMode,
+            uint dwPipeMode, 
+            uint nMaxInstances, 
+            uint nOutBufferSize, 
+            uint nInBufferSize,
+            uint nDefaultTimeOut,
+            IntPtr pipeSecurityDescriptor);
+
+        [DllImport("kernel32.dll")]
+        static extern bool ConnectNamedPipe(
+            IntPtr hNamedPipe,
+            IntPtr lpOverlapped);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool DisconnectNamedPipe(
+            IntPtr hHandle);
+
+
+        [DllImport("kernel32.dll", EntryPoint = "CreateFile", SetLastError = true)]
+        public static extern IntPtr CreateFile(
+            String lpFileName,
+            UInt32 dwDesiredAccess, 
+            UInt32 dwShareMode,
+            IntPtr lpSecurityAttributes,
+            UInt32 dwCreationDisposition,
+            UInt32 dwFlagsAndAttributes,
+            IntPtr hTemplateFile);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern bool WriteFile(
+            IntPtr handle,
+            byte[] buffer,
+            uint count, 
+            ref uint written, 
+            IntPtr lpOverlapped);
+
     }
 }

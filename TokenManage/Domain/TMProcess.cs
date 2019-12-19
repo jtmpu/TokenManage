@@ -12,16 +12,26 @@ namespace TokenManage.Domain
         public string ProcessName { get; }
         public int ProcessId { get; }
 
+        public string NamedPipeInputPath { get; }
+        public string NamedPipeOutputPath { get; }
+        public string NamedPipeErrorPath { get; }
+
         public TMProcess(Process process)
         {
             this.ProcessName = process.ProcessName;
             this.ProcessId = process.Id;
+            this.NamedPipeErrorPath = null;
+            this.NamedPipeInputPath = null;
+            this.NamedPipeOutputPath = null;
         }
 
-        private TMProcess(string processName, int pid)
+        private TMProcess(string processName, int pid, string stdinPath = null, string stdoutPath = null, string stderrPath = null)
         {
             this.ProcessName = processName;
             this.ProcessId = pid;
+            this.NamedPipeErrorPath = stderrPath;
+            this.NamedPipeInputPath = stdinPath;
+            this.NamedPipeOutputPath = stdoutPath;
         }
 
         public static List<TMProcess> GetProcessByName(string name)
@@ -45,9 +55,9 @@ namespace TokenManage.Domain
             return processes.Select(x => new TMProcess(x)).ToList();
         }
 
-        public static TMProcess FromValues(string processName, int pid)
+        public static TMProcess FromValues(string processName, int pid, string stdinPath = null, string stdoutPath = null, string stderrPath = null)
         {
-            return new TMProcess(processName, pid);
+            return new TMProcess(processName, pid, stdinPath, stdoutPath, stderrPath);
         }
     }
 }

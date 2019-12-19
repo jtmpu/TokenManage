@@ -8,6 +8,11 @@ using TokenManage.Domain.AccessTokenInfo;
 
 namespace TokenManage.Logic
 {
+    public enum WinAPICreateProcessFunction
+    {
+        CreateProcessWithToken,
+        CreateProcessAsUser
+    }
     public class TMProcessBuilder
     {
 
@@ -15,30 +20,36 @@ namespace TokenManage.Logic
         /// A flag to determine if we attempt to enable all privileges for the token.
         /// </summary>
         public bool EnableAll { get; private set; }
-
         public String Application { get; private set; }
-
         public string CommandLine { get; private set; }
-
         public AccessTokenHandle TokenHandle { get; private set; }
         public bool SameSession { get; private set; }
+        public bool Interactive { get; private set; }
+        public WinAPICreateProcessFunction WinAPIFunction { get; private set; }
 
-        /// <summary>
-        /// A flag to determine if we create with CreateProcessWithTokenW or CreateProcessAsUser
-        /// </summary>
-        public bool CreateWithImpersonate { get; private set; }
+        public TMProcessBuilder()
+        {
+            this.EnableAll = false;
+            this.Application = @"C:\Windows\System32\cmd.exe";
+            this.CommandLine = null;
+            this.TokenHandle = null;
+            this.SameSession = false;
+            this.Interactive = false;
+            this.WinAPIFunction = WinAPICreateProcessFunction.CreateProcessWithToken;
+        }
+
+        #region Builder setters
 
         public TMProcessBuilder UsingCredentials(string domain, string username, string password)
         {
-            var token = AccessTokenHandle.FromLogin(username, 
-                password, 
-                domain, 
-                API.LogonType.LOGON32_LOGON_INTERACTIVE, 
+            var token = AccessTokenHandle.FromLogin(username,
+                password,
+                domain,
+                API.LogonType.LOGON32_LOGON_INTERACTIVE,
                 API.LogonProvider.LOGON32_PROVIDER_DEFAULT);
             this.TokenHandle = token;
             return this;
         }
-
         public TMProcessBuilder UsingExistingProcessToken(int processId)
         {
             var hProc = TMProcessHandle.FromProcessId(processId);
@@ -47,7 +58,6 @@ namespace TokenManage.Logic
             this.TokenHandle = hDuplicate;
             return this;
         }
-
         public TMProcessBuilder SetApplication(string application)
         {
             this.Application = application;
@@ -60,29 +70,79 @@ namespace TokenManage.Logic
             return this;
         }
 
-        public TMProcessBuilder WithCreateProcessWithToken()
-        {
-            this.CreateWithImpersonate = true;
-            return this;
-        }
-        public TMProcessBuilder WithCreateProcessAsUser()
-        {
-            this.CreateWithImpersonate = false;
-            return this;
-        }
-
-
         /// <summary>
         /// Uses the CreateProcessWithTokenW function. This
         /// creates a new process and primary thread using an access token.
         /// This requires the privileges SE_IMPERSONATE_NAME.
         /// </summary>
         /// <returns></returns>
-        private TMProcess CreateProcessWithToken()
+        public TMProcessBuilder UsingCreateProcessWithToken()
         {
-            this.ElevateProcess(PrivilegeConstants.SeImpersonatePrivilege);
+            this.WinAPIFunction = WinAPICreateProcessFunction.CreateProcessWithToken;
+            return this;
+        }
+
+        /// <summary>
+        /// Uses the CreateProcessAsUser function. This
+        /// creates a new process and primary thread using an access token.
+        /// This requires the privileges SE_ASSIGNPRIMARYTOKEN and SE_INCREASE_QUOTA.
+        /// </summary>
+        /// <returns></returns>
+        public TMProcessBuilder UsingCreateProcessAsUser()
+        {
+            this.WinAPIFunction = WinAPICreateProcessFunction.CreateProcessAsUser;
+            return this;
+        }
+
+        public TMProcessBuilder EnableAllPrivileges()
+        {
+            this.EnableAll = true;
+            return this;
+        }
+
+        public TMProcessBuilder SetupInteractive()
+        {
+            this.Interactive = true;
+            return this;
+        }
+
+        public TMProcessBuilder EnsureSameSesssionId()
+        {
+            this.SameSession = true;
+            return this;
+        }
+
+        #endregion
+
+        public TMProcess Create()
+        {
+            if(this.EnableAll)
+                this.InnerEnablePrivileges();
+
+            if(this.SameSession)
+                this.InnerSetSameSessionId();
+
+            switch(this.WinAPIFunction)
+            {
+                case WinAPICreateProcessFunction.CreateProcessAsUser:
+                    return InnerCreateProcessAsUser();
+                case WinAPICreateProcessFunction.CreateProcessWithToken:
+                    return InnerCreateProcessWithToken();
+                default:
+                    throw new Exception("No WinAPI process creation function chosen.");
+            }
+        }
+
+        #region Internal logic
+
+        private TMProcess InnerCreateProcessWithToken()
+        {
+            this.InnerElevateProcess(PrivilegeConstants.SeImpersonatePrivilege);
 
             STARTUPINFO si = new STARTUPINFO();
+            if (this.Interactive)
+                si = this.InnerSetupInteractive();
+
             PROCESS_INFORMATION pi;
             if (!Advapi32.CreateProcessWithTokenW(this.TokenHandle.GetHandle(), LogonFlags.NetCredentialsOnly,
                 this.Application, this.CommandLine, CreationFlags.NewConsole, IntPtr.Zero, @"C:\", ref si, out pi))
@@ -94,15 +154,9 @@ namespace TokenManage.Logic
             return TMProcess.GetProcessById(pi.dwProcessId);
         }
 
-        /// <summary>
-        /// Uses the CreateProcessAsUser function. This
-        /// creates a new process and primary thread using an access token.
-        /// This requires the privileges SE_ASSIGNPRIMARYTOKEN and SE_INCREASE_QUOTA.
-        /// </summary>
-        /// <returns></returns>
-        private TMProcess CreateProcessAsUser()
+        private TMProcess InnerCreateProcessAsUser()
         {
-            this.ElevateProcess(PrivilegeConstants.SeAssignPrimaryTokenPrivilege, PrivilegeConstants.SeIncreaseQuotaPrivilege);
+            this.InnerElevateProcess(PrivilegeConstants.SeAssignPrimaryTokenPrivilege, PrivilegeConstants.SeIncreaseQuotaPrivilege);
 
             STARTUPINFO si = new STARTUPINFO();
             PROCESS_INFORMATION pi;
@@ -110,7 +164,7 @@ namespace TokenManage.Logic
             SECURITY_ATTRIBUTES saThreadAttributes = new SECURITY_ATTRIBUTES();
             if (!Advapi32.CreateProcessAsUser(this.TokenHandle.GetHandle(), this.Application, this.CommandLine, ref saProcessAttributes,
                 ref saThreadAttributes, false, 0, IntPtr.Zero, null, ref si, out pi))
-            { 
+            {
                 Logger.GetInstance().Error($"Failed to create shell. CreateProcessAsUser failed with error code: {Kernel32.GetLastError()}");
                 throw new Exception();
             }
@@ -118,15 +172,9 @@ namespace TokenManage.Logic
             return TMProcess.GetProcessById(pi.dwProcessId);
         }
 
-        public TMProcessBuilder EnableAllPrivileges()
+        private void InnerEnablePrivileges()
         {
-            this.EnableAll = true;
-            return this;
-        }
-
-        private void EnablePrivileges()
-        {
-            foreach(var privName in Enum.GetNames(typeof(PrivilegeConstants)))
+            foreach (var privName in Enum.GetNames(typeof(PrivilegeConstants)))
             {
                 var privs = new List<ATPrivilege>();
                 privs.Add(ATPrivilege.CreateEnabled(privName));
@@ -135,18 +183,12 @@ namespace TokenManage.Logic
                     AccessTokenPrivileges.AdjustTokenPrivileges(this.TokenHandle, privs);
                 }
                 catch
-                { 
+                {
                 }
             }
         }
 
-        public TMProcessBuilder EnsureSameSesssionId()
-        {
-            this.SameSession = true;
-            return this;
-        }
-        
-        private void SetSameSessionId()
+        private void InnerSetSameSessionId()
         {
             var hCurrent = AccessTokenHandle.GetCurrentProcessTokenHandle();
             var currentSession = AccessTokenSessionId.FromTokenHandle(hCurrent);
@@ -159,14 +201,14 @@ namespace TokenManage.Logic
                 Logger.GetInstance().Error($"Failed to set session id for token. {currentSession.SessionId} vs {tmp.SessionId}");
         }
 
-        private void ElevateProcess(params PrivilegeConstants[] privs)
+        private void InnerElevateProcess(params PrivilegeConstants[] privs)
         {
             var hToken = AccessTokenHandle.GetCurrentProcessTokenHandle();
             var privileges = AccessTokenPrivileges.FromTokenHandle(hToken);
 
-            foreach(var priv in privs)
+            foreach (var priv in privs)
             {
-                if(!privileges.IsPrivilegeEnabled(priv))
+                if (!privileges.IsPrivilegeEnabled(priv))
                 {
                     //Due to current bug, i can only adjust one privilege at a time.
                     var newPriv = new List<ATPrivilege>();
@@ -176,18 +218,19 @@ namespace TokenManage.Logic
             }
         }
 
-        public TMProcess Create()
+        private STARTUPINFO InnerSetupInteractive()
         {
-            if(this.EnableAll)
-                this.EnablePrivileges();
-
-            if(this.SameSession)
-                this.SetSameSessionId();
-
-            if (this.CreateWithImpersonate)
-                return CreateProcessWithToken();
-            else
-                return CreateProcessAsUser();
+            var stdin = NamedPipe.Create("testIn", Constants.PipeMode.Bidirectional);
+            var stdout = NamedPipe.Create("testOut", Constants.PipeMode.Bidirectional);
+            var stderr = NamedPipe.Create("testErr", Constants.PipeMode.Bidirectional);
+            STARTUPINFO si = new STARTUPINFO();
+            si.hStdError = stderr.Handle;
+            si.hStdInput = stdin.Handle;
+            si.hStdOutput = stdout.Handle;
+            return si;
         }
+
+        #endregion
+
     }
 }

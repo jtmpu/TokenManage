@@ -1,12 +1,14 @@
 ﻿using CommandLine;
 using System;
 using System.Linq;
+using System.Diagnostics;
 using TokenManage;
 using TokenManage.Domain;
 using TokenManage.Domain.AccessTokenInfo;
 using TokenManage.API;
 using System.Collections.Generic;
 using TokenManage.Logic;
+using System.Threading;
 
 namespace TokenManageCLI
 {
@@ -29,14 +31,17 @@ namespace TokenManageCLI
         [Option('n', "session", Required = false, HelpText = "Starts a process using the token connected to the specified session id.")]
         public uint SessionId { get; set; }
 
-        [Option('i', "impersonate", Default = false, Required = false, HelpText = "Use CreateProcessWithTokenW (Requires SE_IMPERSONATE). Otherwise, this uses CreateProcessAsUser (requiring SE_ASSIGNPRIMARYTOKEN and SE_INCREASEQUOTA).")]
-        public bool UseImpersonate { get; set; }
+        [Option('u',"AsUser", Default = false, Required = false, HelpText = "Use CreateProcessAsUser (requiring SE_ASSIGNPRIMARYTOKEN and SE_INCREASEQUOTA). Otherwise, this uses CreateProcessWithTokenW (Requires SE_IMPERSONATE).")]
+        public bool AsUser { get; set; }
 
         [Option('e', "enableall", Default = false, HelpText = "Ensure that all possible privileges are enabled.", Required = false)]
         public bool EnabledAllPossiblePrivileges { get; set; }
 
         [Option("samesession", Default = false, HelpText = "Ensure the access tokens have the same session id", Required = false)]
         public bool SameSessionId { get; set; }
+
+        [Option('i', "interactive", Default = false, HelpText = "Attempt to use the current interactive shell instead of opening a new window.")]
+        public bool Interactive { get; set; }
     }
 
     public class StartProcess
@@ -56,33 +61,7 @@ namespace TokenManageCLI
         {
             if(this.options.ProcessID.HasValue)
             {
-                var applicationName = this.options.ApplicationName;
-                if (applicationName == null)
-                    applicationName = @"C:\Windows\System32\cmd.exe";
-
-                var builder = new TMProcessBuilder().
-                    SetApplication(applicationName).
-                    SetCommandLine(this.options.CommandLine).
-                    UsingExistingProcessToken(this.options.ProcessID.Value);
-
-                if (this.options.EnabledAllPossiblePrivileges)
-                    builder.EnableAllPrivileges();
-
-                if (this.options.SameSessionId)
-                    builder.EnsureSameSesssionId();
-
-                if (this.options.UseImpersonate)
-                {
-                    console.Debug("Starting with CreateProcessWithTokenW");
-                    builder.WithCreateProcessWithToken();
-                }
-                else
-                {
-                    console.Debug("Starting with CreateProcessAsUser");
-                    builder.WithCreateProcessAsUser();
-                }
-
-                builder.Create();
+                this.InnerCreateProcess(this.options.ProcessID.Value);
             }
             else if(this.options.System)
             {
@@ -100,108 +79,54 @@ namespace TokenManageCLI
                 else
                 {
                     var lsassProcess = processes.First();
-                    BorrowProcessToken(lsassProcess.ProcessId);
+                    InnerCreateProcess(lsassProcess.ProcessId);
                 }
             }
             else
             {
-                BorrowSessionToken(this.options.SessionId);
+                throw new NotImplementedException();
             }
         }
 
-        public void BorrowSessionToken(uint sessionId)
+        private void InnerCreateProcess(int processId)
         {
-            var hToken = AccessTokenHandle.FromSessionId(sessionId);
-
-            var hDuplicate = AccessTokenHandle.Duplicate(hToken, SECURITY_IMPERSONATION_LEVEL.SecurityImpersonation, TOKEN_TYPE.TokenPrimary, TokenAccess.TOKEN_ALL_ACCESS);
-            
-            STARTUPINFO si = new STARTUPINFO();
-            PROCESS_INFORMATION pi;
-            this.console.Debug($"Starting new process.");
-            string applicationName = Environment.GetEnvironmentVariable("WINDIR") + @"\System32\cmd.exe";
-            if (this.options.ApplicationName != null)
-            {
+            var applicationName = @"C:\Windows\System32\cmd.exe";
+            if (this.options.ApplicationName != null && this.options.ApplicationName != "")
                 applicationName = this.options.ApplicationName;
-            }
-            this.console.Debug($"Starting with application: {applicationName}");
+            var builder = new TMProcessBuilder().
+                SetApplication(applicationName).
+                SetCommandLine(this.options.CommandLine).
+                UsingExistingProcessToken(this.options.ProcessID.Value);
 
-            if (!Advapi32.CreateProcessWithTokenW(hDuplicate.GetHandle(), LogonFlags.NetCredentialsOnly, applicationName, this.options.CommandLine, CreationFlags.NewConsole, IntPtr.Zero, @"C:\", ref si, out pi))
+            if (this.options.EnabledAllPossiblePrivileges)
+                builder.EnableAllPrivileges();
+
+            if (this.options.SameSessionId)
+                builder.EnsureSameSesssionId();
+
+            if (this.options.AsUser)
             {
-                this.console.Error($"Failed to create shell. CreateProcessWithTokenW failed with error code: {Kernel32.GetLastError()}");
-                return;
+                console.Debug("Starting with CreateProcessAsUser");
+                builder.UsingCreateProcessAsUser();
             }
-        }
-
-        public void BorrowProcessToken(int pid)
-        {
-            this.Elevate();
-
-            var hProc = TMProcessHandle.FromProcessId(pid);
-            var hToken = AccessTokenHandle.FromProcessHandle(hProc, TokenAccess.TOKEN_ALL_ACCESS);
-            this.console.Debug($"Duplicating access token.");
-            var hDuplicate = hToken.DuplicatePrimaryToken();
-
-            STARTUPINFO si = new STARTUPINFO();
-            PROCESS_INFORMATION pi;
-            this.console.Debug($"Starting new process.");
-            string applicationName = Environment.GetEnvironmentVariable("WINDIR") + @"\System32\cmd.exe";
-            if (this.options.ApplicationName != null)
+            else
             {
-                applicationName = this.options.ApplicationName;
+                console.Debug("Starting with CreateProcessWithTokenW");
+                builder.UsingCreateProcessWithToken();
             }
-            this.console.Debug($"Starting with application: {applicationName}");
-            SECURITY_ATTRIBUTES saProcessAttributes = new SECURITY_ATTRIBUTES();
-            SECURITY_ATTRIBUTES saThreadAttributes = new SECURITY_ATTRIBUTES();
-            if (!Advapi32.CreateProcessAsUser(hDuplicate.GetHandle(), applicationName, this.options.CommandLine, ref saProcessAttributes, 
-                ref saThreadAttributes, false, 0, IntPtr.Zero, null, ref si, out pi))
+
+            if (this.options.Interactive)
+                builder.SetupInteractive();
+
+            var tmProcess = builder.Create();
+
+            if(this.options.Interactive)
             {
-                this.console.Error($"Failed to create shell. CreateProcessAsUser failed with error code: {Kernel32.GetLastError()}");
+                // Attempt to attach to the processes STDin and STDout.
+                console.WriteLine("Starting interactive shell...");
             }
 
-            this.Revert();
-        }
 
-        private void Elevate()
-        {
-            // 1. Enable debug privileges for our process.
-            var hProc = TMProcessHandle.GetCurrentProcessHandle();
-            var hToken = AccessTokenHandle.FromProcessHandle(hProc, TokenAccess.TOKEN_QUERY, TokenAccess.TOKEN_ADJUST_PRIVILEGES);
-            var newPriv = new List<ATPrivilege>();
-            newPriv.Add(ATPrivilege.FromValues(PrivilegeConstants.SeDebugPrivilege.ToString(), Constants.SE_PRIVILEGE_ENABLED));
-            AccessTokenPrivileges.AdjustTokenPrivileges(hToken, newPriv);
-
-            // 2. Retrieve impersonation token for a LocalSystem process.
-            hProc = TMProcessHandle.FromProcess(TMProcess.GetProcessById(3644), ProcessAccessFlags.QueryInformation);
-            hToken = AccessTokenHandle.FromProcessHandle(hProc, TokenAccess.TOKEN_IMPERSONATE, TokenAccess.TOKEN_DUPLICATE, TokenAccess.TOKEN_QUERY);
-            if(!Advapi32.ImpersonateLoggedOnUser(hToken.GetHandle()))
-            {
-                this.console.Error($"Failed to impersonate local system. ImpersonateLoggedOnUser failed with error: {Kernel32.GetLastError()}");
-                throw new Exception();
-            }
-
-            hToken = AccessTokenHandle.FromThreadHandle(TMThreadHandle.GetCurrentThreadHandle());
-            newPriv = new List<ATPrivilege>();
-            newPriv.Add(ATPrivilege.FromValues(PrivilegeConstants.SeTcbPrivilege.ToString(), Constants.SE_PRIVILEGE_ENABLED));
-            AccessTokenPrivileges.AdjustTokenPrivileges(hToken, newPriv);
-
-
-            hToken = AccessTokenHandle.FromThreadHandle(TMThreadHandle.GetCurrentThreadHandle());
-            var user = AccessTokenUser.FromTokenHandle(hToken);
-            console.WriteLine($"{user.Domain}\\{user.Username}");
-            var privileges = AccessTokenPrivileges.FromTokenHandle(hToken);
-            foreach (var priv in privileges.GetPrivileges())
-            {
-                console.WriteLine($"{priv.Name}: {priv.Attributes}");
-            }
-        }
-
-        private void Revert()
-        {
-            if(!Advapi32.RevertToSelf())
-            {
-                this.console.Error($"Failed to revert to self. RevertToSelf failed with error: {Kernel32.GetLastError()}");
-                throw new Exception();
-            }
         }
     }
 }

@@ -29,5 +29,44 @@ namespace TokenManage.API
             TOKEN_DUPLICATE | TOKEN_IMPERSONATE | TOKEN_QUERY | TOKEN_QUERY_SOURCE |
             TOKEN_ADJUST_PRIVILEGES | TOKEN_ADJUST_GROUPS | TOKEN_ADJUST_DEFAULT |
             TOKEN_ADJUST_SESSIONID);
+
+        //Constants for dwDesiredAccess:
+        public const UInt32 GENERIC_READ = 0x80000000;
+        public const UInt32 GENERIC_WRITE = 0x40000000;
+
+        //Constants for return value:
+        public const Int32 INVALID_HANDLE_VALUE = -1;
+
+        //Constants for dwFlagsAndAttributes:
+        public const UInt32 FILE_FLAG_OVERLAPPED = 0x40000000;
+        public const UInt32 FILE_FLAG_NO_BUFFERING = 0x20000000;
+
+        //Constants for dwCreationDisposition:
+        public const UInt32 OPEN_EXISTING = 3;
+
+        public const uint PIPE_ACCESS_OUTBOUND = 0x00000002;
+
+        public const uint PIPE_ACCESS_DUPLEX = 0x00000003;
+
+        public const uint PIPE_ACCESS_INBOUND = 0x00000001;
+        public const uint PIPE_WAIT = 0x00000000;
+        public const uint PIPE_NOWAIT = 0x00000001;
+        public const uint PIPE_READMODE_BYTE = 0x00000000;
+        public const uint PIPE_READMODE_MESSAGE = 0x00000002;
+        public const uint PIPE_TYPE_BYTE = 0x00000000;
+        public const uint PIPE_TYPE_MESSAGE = 0x00000004;
+        public const uint PIPE_CLIENT_END = 0x00000000;
+        public const uint PIPE_SERVER_END = 0x00000001;
+        public const uint PIPE_UNLIMITED_INSTANCES = 255;
+        public const uint NMPWAIT_WAIT_FOREVER = 0xffffffff;
+        public const uint NMPWAIT_NOWAIT = 0x00000001;
+        public const uint NMPWAIT_USE_DEFAULT_WAIT = 0x00000000;
+        public const ulong ERROR_PIPE_CONNECTED = 535; 
+        public enum PipeMode
+        {
+            InboundOnly = (int)PIPE_ACCESS_INBOUND,
+            OutboundOnly = (int)PIPE_ACCESS_OUTBOUND,
+            Bidirectional = (int)(PIPE_ACCESS_INBOUND + PIPE_ACCESS_OUTBOUND)
+        };
     }
 }
