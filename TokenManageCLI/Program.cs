@@ -11,10 +11,10 @@ namespace TokenManageCLI
         [STAThread]
         static int Main(string[] args)
         {
-            return Parser.Default.ParseArguments<StartProcessOptions, InfoOptions, TokenOptions>(args)
+            return Parser.Default.ParseArguments<StartProcessOptions, SearchOptions, TokenOptions>(args)
                 .MapResult(
                 (StartProcessOptions opts) => RunStartProcess(opts),
-                (InfoOptions opts) => RunInfo(opts),
+                (SearchOptions opts) => RunInfo(opts),
                 (TokenOptions opts) => RunToken(opts),
                 errs => 1);
         }
@@ -36,11 +36,11 @@ namespace TokenManageCLI
             }
         }
 
-        public static int RunInfo(InfoOptions opts)
+        public static int RunInfo(SearchOptions opts)
         {
             var co = new ConsoleOutput(opts);
             Logger.SetGlobalOutput(co);
-            var info = new Info(opts, co);
+            var info = new Search(opts, co);
             try
             {
                 info.Execute();
