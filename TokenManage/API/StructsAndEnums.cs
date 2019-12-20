@@ -374,4 +374,122 @@ namespace TokenManage.API
     {
         public IntPtr Owner;
     }
+
+    public enum SE_OBJECT_TYPE
+    {
+        SE_UNKNOWN_OBJECT_TYPE,
+        SE_FILE_OBJECT,
+        SE_SERVICE,
+        SE_PRINTER,
+        SE_REGISTRY_KEY,
+        SE_LMSHARE,
+        SE_KERNEL_OBJECT,
+        SE_WINDOW_OBJECT,
+        SE_DS_OBJECT,
+        SE_DS_OBJECT_ALL,
+        SE_PROVIDER_DEFINED_OBJECT,
+        SE_WMIGUID_OBJECT,
+        SE_REGISTRY_WOW64_32KEY
+    }
+    public enum SECURITY_INFORMATION
+    {
+        OWNER_SECURITY_INFORMATION = 1,
+        GROUP_SECURITY_INFORMATION = 2,
+        DACL_SECURITY_INFORMATION = 4,
+        SACL_SECURITY_INFORMATION = 8,
+    }
+    public enum WELL_KNOWN_SID_TYPE
+    {
+        WinNullSid = 0,
+        WinWorldSid = 1,
+        WinLocalSid = 2,
+        WinCreatorOwnerSid = 3,
+        WinCreatorGroupSid = 4,
+        WinCreatorOwnerServerSid = 5,
+        WinCreatorGroupServerSid = 6,
+        WinNtAuthoritySid = 7,
+        WinDialupSid = 8,
+        WinNetworkSid = 9,
+        WinBatchSid = 10,
+        WinInteractiveSid = 11,
+        WinServiceSid = 12,
+        WinAnonymousSid = 13,
+        WinProxySid = 14,
+        WinEnterpriseControllersSid = 15,
+        WinSelfSid = 16,
+        WinAuthenticatedUserSid = 17,
+        WinRestrictedCodeSid = 18,
+        WinTerminalServerSid = 19,
+        WinRemoteLogonIdSid = 20,
+        WinLogonIdsSid = 21,
+        WinLocalSystemSid = 22,
+        WinLocalServiceSid = 23,
+        WinNetworkServiceSid = 24,
+        WinBuiltinDomainSid = 25,
+        WinBuiltinAdministratorsSid = 26,
+        WinBuiltinUsersSid = 27,
+        WinBuiltinGuestsSid = 28,
+        WinBuiltinPowerUsersSid = 29,
+        WinBuiltinAccountOperatorsSid = 30,
+        WinBuiltinSystemOperatorsSid = 31,
+        WinBuiltinPrintOperatorsSid = 32,
+        WinBuiltinBackupOperatorsSid = 33,
+        WinBuiltinReplicatorSid = 34,
+        WinBuiltinPreWindows2000CompatibleAccessSid = 35,
+        WinBuiltinRemoteDesktopUsersSid = 36,
+        WinBuiltinNetworkConfigurationOperatorsSid = 37,
+        WinAccountAdministratorSid = 38,
+        WinAccountGuestSid = 39,
+        WinAccountKrbtgtSid = 40,
+        WinAccountDomainAdminsSid = 41,
+        WinAccountDomainUsersSid = 42,
+        WinAccountDomainGuestsSid = 43,
+        WinAccountComputersSid = 44,
+        WinAccountControllersSid = 45,
+        WinAccountCertAdminsSid = 46,
+        WinAccountSchemaAdminsSid = 47,
+        WinAccountEnterpriseAdminsSid = 48,
+        WinAccountPolicyAdminsSid = 49,
+        WinAccountRasAndIasServersSid = 50,
+        WinNTLMAuthenticationSid = 51,
+        WinDigestAuthenticationSid = 52,
+        WinSChannelAuthenticationSid = 53,
+        WinThisOrganizationSid = 54,
+        WinOtherOrganizationSid = 55,
+        WinBuiltinIncomingForestTrustBuildersSid = 56,
+        WinBuiltinPerfMonitoringUsersSid = 57,
+        WinBuiltinPerfLoggingUsersSid = 58,
+        WinBuiltinAuthorizationAccessSid = 59,
+        WinBuiltinTerminalServerLicenseServersSid = 60,
+    }
+
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct ACL
+    {
+        public byte AclRevision;
+        public byte Sbz1;
+        public UInt16 AclSize;
+        public UInt16 AceCount;
+        public UInt16 Sbz2;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct TRUSTEE
+    {
+        public IntPtr pMultipleTrustee;
+        public UInt32 MultipleTrusteeOperation;
+        public UInt32 TrusteeForm;
+        public UInt32 TrusteeType;
+        public IntPtr ptstrName;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct EXPLICIT_ACCESS
+    {
+        public UInt32 grfAccessPermissions;
+        public UInt32 grfAccessMode;
+        public UInt32 grfInheritance;
+        public TRUSTEE Trustee;
+    }
 }

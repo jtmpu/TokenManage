@@ -16,8 +16,8 @@ namespace TokenManageCLI
     [Verb("start", HelpText = "Starts a new process")]
     public class StartProcessOptions : BaseOptions
     {
-        [Option('p', "process", Required = false, HelpText = "ID of process to duplicate access token from.")]
-        public int? ProcessID { get; set; }
+        [Option('p', "process", Default = -1, Required = false, HelpText = "ID of process to duplicate access token from.")]
+        public int ProcessID { get; set; }
 
         [Option('a', "application", Required = false, HelpText = @"Specify the application to run. Defaults to cmd.exe.")]
         public string ApplicationName { get; set; }
@@ -42,6 +42,9 @@ namespace TokenManageCLI
 
         [Option('i', "interactive", Default = false, HelpText = "Attempt to use the current interactive shell instead of opening a new window.")]
         public bool Interactive { get; set; }
+
+        [Option("nogui", Required = false, Default = false, HelpText = "Uses no GUI. This flag will not modify the DACL of the desktop for the targeted user, and won't show a GUI.")]
+        public bool NoGUI { get; set; }
     }
 
     public class StartProcess
@@ -59,9 +62,9 @@ namespace TokenManageCLI
 
         public void Execute()
         {
-            if(this.options.ProcessID.HasValue)
+            if(this.options.ProcessID != -1)
             {
-                this.InnerCreateProcess(this.options.ProcessID.Value);
+                this.InnerCreateProcess(this.options.ProcessID);
             }
             else if(this.options.System)
             {
@@ -96,13 +99,16 @@ namespace TokenManageCLI
             var builder = new TMProcessBuilder().
                 SetApplication(applicationName).
                 SetCommandLine(this.options.CommandLine).
-                UsingExistingProcessToken(this.options.ProcessID.Value);
+                UsingExistingProcessToken(processId);
 
             if (this.options.EnabledAllPossiblePrivileges)
                 builder.EnableAllPrivileges();
 
             if (this.options.SameSessionId)
                 builder.EnsureSameSesssionId();
+
+            if (this.options.NoGUI)
+                builder.UseNoGUI();
 
             if (this.options.AsUser)
             {
@@ -123,7 +129,7 @@ namespace TokenManageCLI
             if(this.options.Interactive)
             {
                 // Attempt to attach to the processes STDin and STDout.
-                console.WriteLine("Starting interactive shell...");
+                console.WriteLine("[WIP]: Starting interactive shell... ");
             }
 
 

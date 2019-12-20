@@ -85,5 +85,8 @@ namespace TokenManage.API
             ref uint written, 
             IntPtr lpOverlapped);
 
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern IntPtr LocalFree(IntPtr hMem);
+
     }
 }

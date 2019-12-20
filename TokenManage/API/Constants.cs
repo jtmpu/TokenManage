@@ -68,5 +68,15 @@ namespace TokenManage.API
             OutboundOnly = (int)PIPE_ACCESS_OUTBOUND,
             Bidirectional = (int)(PIPE_ACCESS_INBOUND + PIPE_ACCESS_OUTBOUND)
         };
+
+        public const uint TRUSTEE_IS_NAME = 0x1;
+        public const uint TRUSTEE_IS_SID = 0x0;
+        public const uint TRUSTEE_IS_USER = 0x1;
+        public const uint TRUSTEE_IS_WELL_KNOWN_GROUP = 0x5;
+        public const uint TRUSTEE_IS_GROUP = 0x2;
+        public const uint GRANT_ACCESS = 0x1;
+        public const uint OBJECT_INHERIT_ACE = 0x1;
+        public const uint DESKTOP_GENERIC_ALL = 0x000F01FF;
+        public const uint WRITE_DAC = 0x00040000;
     }
 }

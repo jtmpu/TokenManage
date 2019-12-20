@@ -184,5 +184,39 @@ namespace TokenManage.API
             bool OpenAsSelf,
             out IntPtr TokenHandle);
 
+        [DllImport("advapi32.dll", SetLastError = true)]
+        public static extern uint GetSecurityInfo(
+            IntPtr handle,
+            SE_OBJECT_TYPE ObjectType,
+            SECURITY_INFORMATION SecurityInfo,
+            out IntPtr pSidOwner,
+            out IntPtr pSidGroup,
+            out IntPtr pDacl,
+            out IntPtr pSacl,
+            out IntPtr pSecurityDescriptor);
+
+        [DllImport("advapi32.dll", SetLastError = true)]
+        public static extern uint SetSecurityInfo(
+            IntPtr handle,
+            SE_OBJECT_TYPE objectType,
+            SECURITY_INFORMATION securityInformation,
+            IntPtr pOwner, 
+            IntPtr pGroup, 
+            IntPtr pDacl, 
+            IntPtr pSacl);
+
+        [DllImport("advapi32.dll", SetLastError = true)]
+        public static extern bool CreateWellKnownSid(
+                WELL_KNOWN_SID_TYPE WellKnownSidType,
+                IntPtr DomainSid,
+                IntPtr pSid,
+                ref uint cbSid);
+
+        [DllImport("advapi32.dll", SetLastError = true)]
+        public static extern int SetEntriesInAcl(
+            int cCountOfExplicitEntries,
+            ref EXPLICIT_ACCESS pListOfExplicitEntries,
+            IntPtr OldAcl,
+            out IntPtr NewAcl);
     }
 }
