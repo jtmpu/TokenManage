@@ -26,6 +26,9 @@ namespace TokenManageCLI
         [Option("disabled", Default = false, Required = false, HelpText = "List processes with the privilege disabled" )]
         public bool Disabled { get; set;  }
 
+        [Option('u', "user", Default = "", Required = false, HelpText = "The username or parts of it to search for processes for.")]
+        public string User { get; set; }
+
     }
     public class Search
     {
@@ -86,6 +89,29 @@ namespace TokenManageCLI
                 var processes = TMProcess.GetProcessByName(this.options.Term);
                 this.InnerPrintProcesses(processes);
             }
+            if(this.options.User != null && this.options.User != "")
+            {
+                var processes = TMProcess.GetAllProcesses();
+                var found = new List<TMProcess>();
+                foreach(var proc in processes)
+                {
+                    try
+                    {
+                        var hProc = TMProcessHandle.FromProcess(proc, ProcessAccessFlags.QueryInformation);
+                        var hToken = AccessTokenHandle.FromProcessHandle(hProc, TokenAccess.TOKEN_QUERY);
+                        var user = AccessTokenUser.FromTokenHandle(hToken);
+                        if (user.Username.ToLower().Contains(this.options.User.ToLower()))
+                        {
+                            found.Add(proc);
+                        }
+                    }
+                    catch
+                    {
+
+                    }
+                }
+                this.InnerPrintProcesses(found);
+            }
         }
 
         private void InnerPrintProcesses(List<TMProcess> processes)
@@ -99,7 +125,7 @@ namespace TokenManageCLI
                     var pHandle = TMProcessHandle.FromProcess(p, ProcessAccessFlags.QueryInformation);
                     var tHandle = AccessTokenHandle.FromProcessHandle(pHandle, TokenAccess.TOKEN_QUERY);
                     var userInfo = AccessTokenUser.FromTokenHandle(tHandle);
-                    username = userInfo.Username;
+                    username = userInfo.Domain + "\\" + userInfo.Username;
                 }
                 catch (Exception)
                 {
