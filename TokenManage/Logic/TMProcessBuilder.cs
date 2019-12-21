@@ -28,9 +28,11 @@ namespace TokenManage.Logic
         public bool Interactive { get; private set; }
         public WinAPICreateProcessFunction WinAPIFunction { get; private set; }
         public bool NoGUI { get; private set; }
+        public int SessionId { get; set; }
 
         public TMProcessBuilder()
         {
+            this.SessionId = -1;
             this.EnableAll = false;
             this.Application = @"C:\Windows\System32\cmd.exe";
             this.CommandLine = null;
@@ -41,6 +43,14 @@ namespace TokenManage.Logic
         }
 
         #region Builder setters
+
+        public TMProcessBuilder UsingSessionId(uint sessionId)
+        {
+            this.SessionId = (int)sessionId;
+            var token = AccessTokenHandle.FromSessionId(sessionId);
+            this.TokenHandle = token;
+            return this;
+        }
 
         public TMProcessBuilder UseNoGUI()
         {

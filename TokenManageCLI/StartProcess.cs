@@ -28,8 +28,8 @@ namespace TokenManageCLI
         [Option('s', "system", Required = false, Default = false, HelpText = "Automatically attempts to open a CMD shell running as NT AUTHORITY\\System")]
         public bool System { get; set; }
 
-        [Option('n', "session", Required = false, HelpText = "Starts a process using the token connected to the specified session id.")]
-        public uint SessionId { get; set; }
+        [Option('n', "session", Default = -1, Required = false, HelpText = "Starts a process using the token connected to the specified session id. This likely requires you to run as local system.")]
+        public int SessionId { get; set; }
 
         [Option('u',"AsUser", Default = false, Required = false, HelpText = "Use CreateProcessAsUser (requiring SE_ASSIGNPRIMARYTOKEN and SE_INCREASEQUOTA). Otherwise, this uses CreateProcessWithTokenW (Requires SE_IMPERSONATE).")]
         public bool AsUser { get; set; }
@@ -62,9 +62,9 @@ namespace TokenManageCLI
 
         public void Execute()
         {
-            if(this.options.ProcessID != -1)
+            if(this.options.ProcessID != -1 || this.options.SessionId != -1)
             {
-                this.InnerCreateProcess(this.options.ProcessID);
+                this.InnerCreateProcess(this.options.ProcessID, this.options.SessionId);
             }
             else if(this.options.System)
             {
@@ -82,24 +82,29 @@ namespace TokenManageCLI
                 else
                 {
                     var lsassProcess = processes.First();
-                    InnerCreateProcess(lsassProcess.ProcessId);
+                    InnerCreateProcess(lsassProcess.ProcessId, -1);
                 }
-            }
-            else
-            {
-                throw new NotImplementedException();
             }
         }
 
-        private void InnerCreateProcess(int processId)
+        private void InnerCreateProcess(int processId, int sessionId)
         {
             var applicationName = @"C:\Windows\System32\cmd.exe";
             if (this.options.ApplicationName != null && this.options.ApplicationName != "")
                 applicationName = this.options.ApplicationName;
             var builder = new TMProcessBuilder().
                 SetApplication(applicationName).
-                SetCommandLine(this.options.CommandLine).
-                UsingExistingProcessToken(processId);
+                SetCommandLine(this.options.CommandLine);
+
+            if(sessionId != -1)
+            {
+                builder.UsingSessionId((uint)sessionId);
+            }
+            else
+            {
+                builder.UsingExistingProcessToken(processId);
+            }
+                
 
             if (this.options.EnabledAllPossiblePrivileges)
                 builder.EnableAllPrivileges();
