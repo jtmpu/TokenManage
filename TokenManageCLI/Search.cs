@@ -116,21 +116,24 @@ namespace TokenManageCLI
 
         private void InnerPrintProcesses(List<TMProcess> processes)
         {
-            List<Tuple<string, string, string>> processesInfo = new List<Tuple<string, string, string>>();
+            List<Tuple<string, string, string, string>> processesInfo = new List<Tuple<string, string, string, string>>();
             foreach (var p in processes)
             {
+                var sessionId = "";
                 string username = "";
                 try
                 {
                     var pHandle = TMProcessHandle.FromProcess(p, ProcessAccessFlags.QueryInformation);
                     var tHandle = AccessTokenHandle.FromProcessHandle(pHandle, TokenAccess.TOKEN_QUERY);
                     var userInfo = AccessTokenUser.FromTokenHandle(tHandle);
+                    var sessionInfo = AccessTokenSessionId.FromTokenHandle(tHandle);
                     username = userInfo.Domain + "\\" + userInfo.Username;
+                    sessionId = sessionInfo.SessionId.ToString();
                 }
                 catch (Exception)
                 {
                 }
-                processesInfo.Add(new Tuple<string, string, string>(p.ProcessId.ToString(), p.ProcessName, username));
+                processesInfo.Add(new Tuple<string, string, string, string>(p.ProcessId.ToString(), p.ProcessName, username, sessionId));
             }
 
             StringBuilder output = new StringBuilder();
@@ -138,21 +141,25 @@ namespace TokenManageCLI
             int maxName = 0;
             int maxPid = 0;
             int maxUser = 0;
+            int maxSession = 0;
 
             foreach (var p in processesInfo)
             {
                 maxPid = Math.Max(maxPid, p.Item1.Length);
                 maxName = Math.Max(maxName, p.Item2.Length);
                 maxUser = Math.Max(maxUser, p.Item3.Length);
+                maxSession = Math.Max(maxSession, p.Item4.Length);
             }
 
             string name = "PROCESS";
             string pid = "PID";
             string user = "USER";
+            string session = "SESSION";
 
             output.Append(pid + "," + generateSpaces(maxPid + padding - pid.Length));
             output.Append(name + "," + generateSpaces(maxName + padding - name.Length));
-            output.Append(user + "\n");
+            output.Append(user + generateSpaces(maxUser + padding - user.Length));
+            output.Append(session + "\n");
 
             var sorted = processesInfo.OrderBy(x => x.Item1).ToList();
             foreach (var p in sorted)
@@ -163,6 +170,8 @@ namespace TokenManageCLI
                 line += p.Item2 + ",";
                 line += generateSpaces(maxName + padding - p.Item2.Length);
                 line += p.Item3;
+                line += generateSpaces(maxUser + padding - p.Item3.Length);
+                line += p.Item4;
                 output.Append(line + "\n");
             }
 
