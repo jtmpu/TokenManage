@@ -8,6 +8,8 @@ project is mature enough, i will start adding the compiled versions targeting se
 Currently, both the library and the CLI application are compiled for .NET Framework 4.0, .NET Framework 4.5 and .NET Core.
 This list of compilation targets is likely to expand in the future, as well as providing compiled binaries.
 
+The DLL and executable has been pre compiled and can be found at https://github.com/jtmpu/PrecompiledBinaries.
+
 ## TokenManage CLI
 
 List processes on the system.
